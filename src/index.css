@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+  /* Background - garden greens */
+  --bg-primary: #E8F5E9;
+  --bg-secondary: #C8E6C9;
+  --bg-dark: #A5D6A7;
+
+  /* Accents - garden flowers */
+  --accent-sun: #FFD600;
+  --accent-sky: #81D4FA;
+  --accent-rose: #FF1744;
+  --accent-lavender: #7C4DFF;
+  --accent-peach: #FF6E40;
+  --accent-sage: #00E676;
+
+  /* Card */
+  --card-bg: #FFFFFF;
+  --card-back: #66BB6A;
+  --card-back-pattern: #43A047;
+
+  /* Text */
+  --text-primary: #1B5E20;
+  --text-secondary: #2E7D32;
+
+  /* Shadows */
+  --shadow-soft: rgba(27, 94, 32, 0.1);
+  --shadow-medium: rgba(27, 94, 32, 0.2);
+  --shadow-card: 0 4px 12px rgba(27, 94, 32, 0.12), 0 1px 3px rgba(27, 94, 32, 0.08);
+  --shadow-card-hover: 0 8px 24px rgba(27, 94, 32, 0.15), 0 2px 6px rgba(27, 94, 32, 0.1);
+
+  /* Card dimensions - tiny for mobile, scales up */
+  --card-width: 40px;
+  --card-height: calc(var(--card-width) * 1.4);
+  --card-radius: 8px;
+}
+
+.app-shell {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.app-frame {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-primary);
+}
+
+@media (min-width: 360px) {
+  :root {
+    --card-width: 44px;
+    --card-radius: 9px;
+  }
+}
+
+@media (min-width: 380px) {
+  :root {
+    --card-width: 46px;
+    --card-radius: 10px;
+  }
+}
+
+@media (min-width: 400px) {
+  :root {
+    --card-width: 50px;
+    --card-radius: 11px;
+  }
+}
+
+@media (min-width: 430px) {
+  :root {
+    --card-width: 54px;
+    --card-radius: 12px;
+  }
+}
+
+@media (min-width: 500px) {
+  :root {
+    --card-width: 62px;
+    --card-radius: 13px;
+  }
+}
+
+@media (min-width: 600px) {
+  :root {
+    --card-width: 72px;
+    --card-radius: 15px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --card-width: 85px;
+    --card-radius: 16px;
+  }
+}
+
+@media (min-width: 900px) {
+  :root {
+    --card-width: 95px;
+    --card-radius: 18px;
+  }
+}
+
+@media (min-width: 700px) and (pointer: fine) {
+  body {
+    background:
+      radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.45), transparent 28%),
+      linear-gradient(180deg, #D8EED8 0%, #A5D6A7 100%);
+  }
+
+  :root {
+    --card-width: 54px;
+    --card-radius: 12px;
+  }
+
+  .app-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .app-frame {
+    width: min(430px, 100%);
+    height: min(932px, 100%);
+    border-radius: 28px;
+    box-shadow: 0 24px 80px rgba(27, 94, 32, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes particle-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(255, 214, 0, 0); }
+}
+
+@keyframes gentle-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.02); }
+}
+
+/* Garden texture overlay */
+.garden-bg {
+  background: 
+    radial-gradient(ellipse at 20% 80%, rgba(129, 199, 132, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(165, 214, 167, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, #E8F5E9 0%, #C8E6C9 100%);
+  position: relative;
+}
+
+.garden-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 90% 60%, rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 100px 100px, 120px 120px, 80px 80px, 90px 90px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   ZEN GARDEN THEME
+   Sand, stone, bamboo, water — muted earth tones
+   ============================================ */
+
+[data-theme="zen"] {
+  /* Zen palette — warm earth tones */
+  --bg-primary: #E8E0D0;
+  --bg-secondary: #D4C9B8;
+  --bg-dark: #BEB4A4;
+
+  /* Stone and mineral accents */
+  --accent-sun: #8D8375;
+  --accent-sky: #7A9BAA;
+  --accent-rose: #A67F7A;
+  --accent-lavender: #8B7FA8;
+  --accent-peach: #B89A82;
+  --accent-sage: #7A8A72;
+
+  /* Text — charcoal instead of dark green */
+  --text-primary: #3D3830;
+  --text-secondary: #5A5048;
+
+  /* Card back — slate/stone instead of green */
+  --card-back: #7A7268;
+  --card-back-pattern: #5C5650;
+
+  /* Shadows — neutral brown instead of green */
+  --shadow-soft: rgba(61, 56, 48, 0.1);
+  --shadow-medium: rgba(61, 56, 48, 0.2);
+  --shadow-card: 0 4px 12px rgba(61, 56, 48, 0.12), 0 1px 3px rgba(61, 56, 48, 0.08);
+  --shadow-card-hover: 0 8px 24px rgba(61, 56, 48, 0.15), 0 2px 6px rgba(61, 56, 48, 0.1);
+}
+
+/* Zen background — sand and gravel instead of garden green */
+[data-theme="zen"] .garden-bg {
+  background:
+    radial-gradient(ellipse at 30% 85%, rgba(190, 180, 165, 0.4) 0%, transparent 45%),
+    radial-gradient(ellipse at 75% 80%, rgba(180, 170, 155, 0.35) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 50%, #E8E0D0 0%, #D4C9B8 100%);
+}
+
+/* Sand texture dots for zen */
+[data-theme="zen"] .garden-bg::before {
+  background-image:
+    radial-gradient(circle at 15% 25%, rgba(180, 170, 155, 0.15) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 85% 70%, rgba(180, 170, 155, 0.12) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 45% 60%, rgba(170, 160, 145, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 70% 35%, rgba(175, 165, 150, 0.1) 1px, transparent 1px);
+  background-size: 80px 80px, 100px 100px, 70px 70px, 90px 90px;
+}

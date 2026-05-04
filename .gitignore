@@ -1,0 +1,7 @@
+node_modules/
+dist/
+ios/
+.tmp-tests/
+*.local
+.env
+.DS_Store
