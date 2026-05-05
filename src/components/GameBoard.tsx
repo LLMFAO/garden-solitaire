@@ -9,12 +9,12 @@ import { Tableau } from './Tableau';
 import { MenuOverlay } from './MenuOverlay';
 import { WinOverlay } from './WinOverlay';
 import { GardenBackground } from './GardenBackground';
-import { ZenBackground } from './ZenBackground';
 import { GardenFacts } from './GardenFacts';
 
-export const GameBoard: React.FC<{ compact?: boolean; theme?: 'flower' | 'zen' }> = ({ compact, theme }) => {
+export const GameBoard: React.FC<{ compact?: boolean }> = ({ compact }) => {
   const gameStatus = useGameStore((s) => s.gameStatus);
   const newGame = useGameStore((s) => s.newGame);
+  const checkAutoWin = useGameStore((s) => s.checkAutoWin);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [lastActivity, setLastActivity] = React.useState(Date.now());
 
@@ -31,6 +31,15 @@ export const GameBoard: React.FC<{ compact?: boolean; theme?: 'flower' | 'zen' }
   const handleNewGame = () => {
     newGame();
   };
+
+  // Auto-detect solvable states and auto-play to foundation
+  React.useEffect(() => {
+    if (gameStatus !== 'playing') return;
+    const interval = setInterval(() => {
+      checkAutoWin();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [gameStatus, checkAutoWin]);
 
   return (
     <motion.div
@@ -49,8 +58,8 @@ export const GameBoard: React.FC<{ compact?: boolean; theme?: 'flower' | 'zen' }
       onClick={updateActivity}
       onTouchStart={updateActivity}
     >
-      {theme === 'flower' ? <GardenBackground /> : <ZenBackground />}
-      <TopBar onMenuOpen={() => { updateActivity(); setMenuOpen(true); }} />
+      <GardenBackground />
+      <TopBar onMenuOpen={() => { updateActivity(); setMenuOpen(true); }} onAutoSolve={checkAutoWin} />
 
       <motion.div
         style={{

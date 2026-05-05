@@ -106,23 +106,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
         >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 900,
-              color: '#1B5E20',
-              letterSpacing: '-0.5px',
-            }}
-          >
-            JozGames
-          </h1>
           <div
             style={{
               fontSize: 22,
               fontWeight: 800,
               color: '#2E7D32',
-              marginTop: 4,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -205,21 +193,22 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         </motion.p>
       </motion.div>
 
-      {/* Version */}
+      {/* JozGames at bottom */}
       <motion.div
         style={{
           position: 'absolute',
           bottom: '5%',
-          fontSize: 11,
+          fontSize: 12,
           color: '#81C784',
-          opacity: 0.6,
-          fontWeight: 600,
+          opacity: 0.7,
+          fontWeight: 700,
+          letterSpacing: '1px',
         }}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.6 }}
+        animate={{ opacity: 0.7 }}
         transition={{ delay: 1.5 }}
       >
-        v1.0.0
+        JozGames
       </motion.div>
     </motion.div>
   );

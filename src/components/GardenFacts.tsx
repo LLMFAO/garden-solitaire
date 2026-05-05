@@ -98,7 +98,7 @@ export const GardenFacts: React.FC<GardenFactsProps> = ({ lastActivity }) => {
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           style={{
             position: 'absolute',
-            bottom: 'max(80px, 10%)',
+            bottom: 'max(calc(80px + env(safe-area-inset-bottom)), 10%)',
             left: 0,
             right: 0,
             margin: '0 auto',

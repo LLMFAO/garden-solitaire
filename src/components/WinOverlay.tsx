@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { WinParticles } from './WinParticles';
 
 interface WinOverlayProps {
@@ -18,6 +19,13 @@ export const WinOverlay: React.FC<WinOverlayProps> = ({ isOpen, onNewGame }) => 
   const score = useGameStore((s) => s.score);
   const timeElapsed = useGameStore((s) => s.timeElapsed);
   const moves = useGameStore((s) => s.moves);
+  const recordGameResult = useSettingsStore((s) => s.recordGameResult);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      recordGameResult(true, timeElapsed, score);
+    }
+  }, [isOpen, timeElapsed, score, recordGameResult]);
 
   return (
     <AnimatePresence>
@@ -38,6 +46,8 @@ export const WinOverlay: React.FC<WinOverlayProps> = ({ isOpen, onNewGame }) => 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              paddingTop: 'env(safe-area-inset-top)',
+              paddingBottom: 'env(safe-area-inset-bottom)',
             }}
           >
             <motion.div

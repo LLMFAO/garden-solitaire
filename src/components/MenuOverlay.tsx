@@ -55,7 +55,7 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 16,
+              padding: 'calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))',
               pointerEvents: 'none',
             }}
           >
@@ -87,7 +87,7 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => 
                 Garden Solitaire
               </h2>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)', opacity: 0.7 }}>
-                Flower Garden & Zen Garden
+                Traditional Garden Solitaire
               </p>
             </div>
 

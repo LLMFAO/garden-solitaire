@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
-import { useSettingsStore } from '../store/settingsStore';
 
 interface TopBarProps {
   onMenuOpen: () => void;
+  onAutoSolve?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -13,15 +13,13 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen }) => {
+export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen, onAutoSolve }) => {
   const score = useGameStore((s) => s.score);
   const timeElapsed = useGameStore((s) => s.timeElapsed);
   const gameStatus = useGameStore((s) => s.gameStatus);
   const foundation = useGameStore((s) => s.foundation);
   const moves = useGameStore((s) => s.moves);
   const gardenBoosts = useGameStore((s) => s.gardenBoosts);
-  const theme = useSettingsStore((s) => s.theme);
-  const toggleTheme = useSettingsStore((s) => s.toggleTheme);
 
   const foundationProgress = foundation.reduce((sum, p) => sum + p.length, 0) / 52;
   const activityCount = moves;
@@ -35,7 +33,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '8px 12px',
+        padding: 'calc(8px + env(safe-area-inset-top)) 12px 8px',
         background: 'rgba(255, 255, 255, 0.7)',
         borderRadius: 20,
         margin: '6px 8px 0',
@@ -106,11 +104,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen }) => {
       </div>
 
       <motion.button
-        onTap={toggleTheme}
+        onTap={onAutoSolve}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         style={{
-          background: 'linear-gradient(135deg, #8D8375 0%, #6B635A 100%)',
+          background: 'linear-gradient(135deg, #FFD600 0%, #FFA000 100%)',
           color: 'white',
           border: 'none',
           borderRadius: 14,
@@ -119,10 +117,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen }) => {
           fontWeight: 800,
           cursor: 'pointer',
           fontFamily: 'inherit',
-          boxShadow: '0 2px 8px rgba(61, 56, 48, 0.3)',
+          boxShadow: '0 2px 8px rgba(255, 214, 0, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
         }}
       >
-        {theme === 'flower' ? '🪨' : '🌸'}
+        ✨
       </motion.button>
     </motion.div>
   );

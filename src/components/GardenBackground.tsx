@@ -2,406 +2,95 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 
-interface Plant {
-  id: number;
-  x: number;
-  y: number;
-  type: 'flower' | 'tree' | 'bush' | 'grass' | 'spire' | 'orchid';
-  color: string;
-  size: number;
-  delay: number;
-}
-
 interface GardenBoostToken {
   id: number;
   type: 'sun' | 'water';
   x: number;
   y: number;
-  midX: number;
-  endX: number;
+  targetX: number;
+  targetY: number;
+  targetBloomId: number;
   duration: number;
 }
 
-const PLANTS: Plant[] = [
-  // Low box edging and early foliage.
-  { id: 1, x: 4, y: 98, type: 'grass', color: '#4B7A4C', size: 1.1, delay: 0 },
-  { id: 2, x: 10, y: 96, type: 'bush', color: '#527E50', size: 1.15, delay: 0 },
-  { id: 3, x: 16, y: 98, type: 'grass', color: '#6E8F5A', size: 1.1, delay: 0 },
-  { id: 4, x: 23, y: 96, type: 'flower', color: '#C78A9D', size: 0.82, delay: 0 },
-  { id: 5, x: 31, y: 97, type: 'bush', color: '#496F45', size: 1.22, delay: 0 },
-  { id: 6, x: 39, y: 95, type: 'flower', color: '#AFA0C8', size: 0.78, delay: 0 },
-  { id: 7, x: 48, y: 98, type: 'grass', color: '#5E7D50', size: 1.25, delay: 0 },
-  { id: 8, x: 56, y: 96, type: 'flower', color: '#D7B7A3', size: 0.82, delay: 0 },
-  { id: 9, x: 65, y: 97, type: 'bush', color: '#527E50', size: 1.2, delay: 0 },
-  { id: 10, x: 73, y: 95, type: 'flower', color: '#C98DA1', size: 0.78, delay: 0 },
-  { id: 11, x: 82, y: 98, type: 'grass', color: '#6C8B5A', size: 1.15, delay: 0 },
-  { id: 12, x: 92, y: 96, type: 'bush', color: '#486D43', size: 1.1, delay: 0 },
+interface BloomPoint {
+  id: number;
+  x: number;
+  y: number;
+  color: string;
+  size: number;
+}
 
-  // Middle border: roses, lavender, and clipped shrubs.
-  { id: 13, x: 8, y: 91, type: 'flower', color: '#B56E82', size: 0.9, delay: 0.04 },
-  { id: 14, x: 15, y: 88, type: 'spire', color: '#E8DCC6', size: 1.05, delay: 0.08 },
-  { id: 15, x: 23, y: 90, type: 'flower', color: '#E1C5B1', size: 0.95, delay: 0.05 },
-  { id: 16, x: 32, y: 87, type: 'orchid', color: '#F2EFE4', size: 1.02, delay: 0.1 },
-  { id: 17, x: 41, y: 91, type: 'flower', color: '#C07A8E', size: 0.88, delay: 0.06 },
-  { id: 18, x: 50, y: 89, type: 'bush', color: '#3E6B43', size: 1.35, delay: 0.12 },
-  { id: 19, x: 59, y: 87, type: 'spire', color: '#D8C8A7', size: 1.18, delay: 0.1 },
-  { id: 20, x: 68, y: 90, type: 'flower', color: '#D6A0A8', size: 0.94, delay: 0.06 },
-  { id: 21, x: 77, y: 88, type: 'orchid', color: '#F5F1E6', size: 1.05, delay: 0.09 },
-  { id: 22, x: 86, y: 91, type: 'flower', color: '#E5C8B6', size: 0.9, delay: 0.04 },
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+const reveal = (progress: number, start: number, range = 0.16) => clamp01((progress - start) / range);
 
-  // Taller back border that grows upward as the garden matures.
-  { id: 23, x: 12, y: 79, type: 'spire', color: '#E8DDC6', size: 1.35, delay: 0.18 },
-  { id: 24, x: 20, y: 82, type: 'flower', color: '#C66F84', size: 1.15, delay: 0.16 },
-  { id: 25, x: 29, y: 76, type: 'orchid', color: '#F4EFE2', size: 1.32, delay: 0.23 },
-  { id: 26, x: 38, y: 80, type: 'flower', color: '#D9B9C0', size: 1.08, delay: 0.18 },
-  { id: 27, x: 47, y: 74, type: 'spire', color: '#CFC09B', size: 1.45, delay: 0.28 },
-  { id: 28, x: 56, y: 81, type: 'flower', color: '#B9697C', size: 1.1, delay: 0.18 },
-  { id: 29, x: 65, y: 76, type: 'orchid', color: '#EFE7D1', size: 1.3, delay: 0.24 },
-  { id: 30, x: 74, y: 82, type: 'flower', color: '#E3C1A7', size: 1.04, delay: 0.17 },
-  { id: 31, x: 83, y: 78, type: 'spire', color: '#D9CEAF', size: 1.38, delay: 0.2 },
-  { id: 32, x: 91, y: 83, type: 'flower', color: '#C98393', size: 1, delay: 0.16 },
+const BLOOM_COLORS = ['#F6EFE0', '#D9A7B4', '#B997C9', '#E8C2A4', '#F8F3E8', '#C47E92'];
 
-  // Fine filler and repeated planting rhythm.
-  { id: 33, x: 5, y: 86, type: 'grass', color: '#536F46', size: 1.2, delay: 0.11 },
-  { id: 34, x: 18, y: 84, type: 'flower', color: '#E7D8BE', size: 0.76, delay: 0.12 },
-  { id: 35, x: 36, y: 84, type: 'flower', color: '#C58D9E', size: 0.78, delay: 0.14 },
-  { id: 36, x: 52, y: 86, type: 'grass', color: '#617D52', size: 1.2, delay: 0.13 },
-  { id: 37, x: 71, y: 84, type: 'flower', color: '#E8D5C4', size: 0.76, delay: 0.14 },
-  { id: 38, x: 95, y: 86, type: 'grass', color: '#536F46', size: 1.15, delay: 0.11 },
+const BLOOM_POINTS: BloomPoint[] = Array.from({ length: 88 }, (_, index) => ({
+  id: index,
+  x: 5 + ((index * 29) % 90),
+  y: 72 + ((index * 19) % 24),
+  color: BLOOM_COLORS[index % BLOOM_COLORS.length],
+  size: 0.72 + (index % 5) * 0.08,
+}));
 
-  // Mature border additions: later point levels keep revealing new plant styles.
-  { id: 39, x: 9, y: 72, type: 'orchid', color: '#F7F1E6', size: 1.4, delay: 0.34 },
-  { id: 40, x: 17, y: 75, type: 'flower', color: '#D79AA7', size: 1.28, delay: 0.38 },
-  { id: 41, x: 26, y: 69, type: 'spire', color: '#D6C39E', size: 1.7, delay: 0.46 },
-  { id: 42, x: 35, y: 73, type: 'bush', color: '#3F6642', size: 1.7, delay: 0.42 },
-  { id: 43, x: 44, y: 68, type: 'flower', color: '#F3E8D4', size: 1.28, delay: 0.52 },
-  { id: 44, x: 53, y: 72, type: 'flower', color: '#E6C9A9', size: 1.25, delay: 0.4 },
-  { id: 45, x: 62, y: 67, type: 'orchid', color: '#F8F3E8', size: 1.42, delay: 0.5 },
-  { id: 46, x: 71, y: 74, type: 'flower', color: '#C47688', size: 1.24, delay: 0.36 },
-  { id: 47, x: 80, y: 69, type: 'spire', color: '#D8C8A7', size: 1.65, delay: 0.44 },
-  { id: 48, x: 90, y: 73, type: 'bush', color: '#466F47', size: 1.62, delay: 0.4 },
-  { id: 49, x: 13, y: 64, type: 'flower', color: '#EEE1C8', size: 1.12, delay: 0.58 },
-  { id: 50, x: 31, y: 62, type: 'orchid', color: '#F5EFE2', size: 1.55, delay: 0.66 },
-  { id: 51, x: 50, y: 61, type: 'flower', color: '#B96F82', size: 1.34, delay: 0.62 },
-  { id: 52, x: 68, y: 63, type: 'spire', color: '#CDBD98', size: 1.82, delay: 0.68 },
-  { id: 53, x: 87, y: 65, type: 'flower', color: '#E2B8A5', size: 1.18, delay: 0.6 },
-  { id: 54, x: 7, y: 58, type: 'flower', color: '#F2E9D5', size: 1.18, delay: 0.72 },
-  { id: 55, x: 18, y: 60, type: 'flower', color: '#D2A0AD', size: 1.22, delay: 0.74 },
-  { id: 56, x: 28, y: 56, type: 'orchid', color: '#FAF6EA', size: 1.65, delay: 0.78 },
-  { id: 57, x: 39, y: 59, type: 'flower', color: '#F0DEC2', size: 1.18, delay: 0.8 },
-  { id: 58, x: 50, y: 55, type: 'flower', color: '#F4E7CF', size: 1.3, delay: 0.84 },
-  { id: 59, x: 61, y: 59, type: 'flower', color: '#C48798', size: 1.22, delay: 0.82 },
-  { id: 60, x: 72, y: 56, type: 'orchid', color: '#F7F2E7', size: 1.6, delay: 0.88 },
-  { id: 61, x: 83, y: 60, type: 'flower', color: '#E8CDB7', size: 1.14, delay: 0.9 },
-  { id: 62, x: 94, y: 58, type: 'flower', color: '#EFE0C5', size: 1.16, delay: 0.92 },
-  { id: 63, x: 21, y: 51, type: 'flower', color: '#C16F83', size: 1.36, delay: 0.94 },
-  { id: 64, x: 42, y: 49, type: 'orchid', color: '#FBF7EE', size: 1.72, delay: 0.96 },
-  { id: 65, x: 64, y: 50, type: 'flower', color: '#E5D6BC', size: 1.3, delay: 0.95 },
-  { id: 66, x: 82, y: 51, type: 'orchid', color: '#F6F0E2', size: 1.62, delay: 0.98 },
+const MEADOW_SPECKS = Array.from({ length: 70 }, (_, index) => ({
+  id: index,
+  x: 2 + ((index * 37) % 96),
+  y: 67 + ((index * 23) % 29),
+  opacity: 0.18 + (index % 5) * 0.035,
+}));
+
+const BORDER_MASSES = [
+  { id: 1, x: 13, y: 92, start: 0.16, width: 92, height: 72, bloom: '#D39AAA' },
+  { id: 2, x: 35, y: 90, start: 0.24, width: 106, height: 80, bloom: '#E8D6B8' },
+  { id: 3, x: 63, y: 91, start: 0.34, width: 112, height: 84, bloom: '#B391CA' },
+  { id: 4, x: 86, y: 93, start: 0.44, width: 88, height: 74, bloom: '#C97D91' },
+  { id: 5, x: 24, y: 95, start: 0.58, width: 100, height: 88, bloom: '#F1E6C8' },
+  { id: 6, x: 73, y: 96, start: 0.68, width: 104, height: 90, bloom: '#D8A8B8' },
 ];
 
-const FlowerSVG: React.FC<{ color: string; size: number; progress: number }> = ({ color, size, progress }) => {
-  const scale = size * (0.3 + progress * 0.7);
-  return (
-    <svg width={36 * scale} height={44 * scale} viewBox="0 0 36 44" style={{ overflow: 'visible' }}>
-      {/* Stem */}
-      <motion.path
-        d="M18 44 Q18 27 18 16"
-        stroke="#3F8E44"
-        strokeWidth={2}
-        fill="none"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: progress }}
-        transition={{ duration: 1, delay: 0.2 }}
-      />
-      {/* Leaves */}
-      <motion.path
-        d="M18 32 Q9 30 6 26 Q12 32 18 32"
-        fill="#5FAF63"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: progress, opacity: progress }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-        style={{ transformOrigin: '18px 32px' }}
-      />
-      <motion.path
-        d="M18 27 Q27 24 30 20 Q24 27 18 27"
-        fill="#7BC67F"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: progress, opacity: progress }}
-        transition={{ duration: 0.5, delay: 0.7 }}
-        style={{ transformOrigin: '18px 27px' }}
-      />
-      {/* Petals */}
-      <motion.g
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: progress, opacity: progress }}
-        transition={{ duration: 0.8, delay: 0.8, type: 'spring' }}
-        style={{ transformOrigin: '18px 13px' }}
-      >
-        <ellipse cx="18" cy="7" rx="3.2" ry="5.8" fill={color} opacity={0.88} />
-        <ellipse cx="11.5" cy="12" rx="3.4" ry="5.6" fill={color} opacity={0.82} transform="rotate(-48 11.5 12)" />
-        <ellipse cx="24.5" cy="12" rx="3.4" ry="5.6" fill={color} opacity={0.82} transform="rotate(48 24.5 12)" />
-        <ellipse cx="13" cy="19" rx="3" ry="5" fill={color} opacity={0.72} transform="rotate(35 13 19)" />
-        <ellipse cx="23" cy="19" rx="3" ry="5" fill={color} opacity={0.72} transform="rotate(-35 23 19)" />
-        <circle cx="18" cy="13.5" r="3.6" fill="rgba(255, 236, 179, 0.95)" />
-        <circle cx="18" cy="13.5" r="1.2" fill="#8D6E63" opacity={0.45} />
-      </motion.g>
-    </svg>
-  );
-};
-
-const SpireSVG: React.FC<{ color: string; size: number; progress: number }> = ({ color, size, progress }) => {
-  const scale = size * (0.35 + progress * 0.65);
-  return (
-    <svg width={26 * scale} height={72 * scale} viewBox="0 0 26 72" style={{ overflow: 'visible' }}>
-      <motion.path
-        d="M13 72 C13 52 13 32 13 10"
-        stroke="#466B43"
-        strokeWidth={2}
-        strokeLinecap="round"
-        fill="none"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: progress }}
-        transition={{ duration: 0.9, type: 'spring' }}
-      />
-      <motion.g
-        initial={{ opacity: 0, scaleY: 0 }}
-        animate={{ opacity: progress, scaleY: progress }}
-        transition={{ duration: 0.8, delay: 0.18 }}
-        style={{ transformOrigin: '13px 72px' }}
-      >
-        {[12, 19, 26, 33, 40, 47, 54].map((cy, index) => (
-          <React.Fragment key={cy}>
-            <ellipse cx={index % 2 === 0 ? 9 : 17} cy={cy} rx="3.6" ry="5.2" fill={color} opacity={0.82 - index * 0.045} />
-            <ellipse cx={index % 2 === 0 ? 17 : 9} cy={cy + 3} rx="3.1" ry="4.5" fill={color} opacity={0.68 - index * 0.035} />
-          </React.Fragment>
-        ))}
-        <path d="M13 58 C6 54 5 47 5 43 C10 46 12 51 13 58" fill="#6F8B5B" opacity="0.85" />
-        <path d="M13 50 C20 47 21 40 21 36 C16 40 14 45 13 50" fill="#7E9967" opacity="0.8" />
-      </motion.g>
-    </svg>
-  );
-};
-
-const OrchidSVG: React.FC<{ color: string; size: number; progress: number }> = ({ color, size, progress }) => {
-  const scale = size * (0.35 + progress * 0.65);
-  return (
-    <svg width={42 * scale} height={58 * scale} viewBox="0 0 42 58" style={{ overflow: 'visible' }}>
-      <motion.path
-        d="M21 58 C21 43 20 31 22 18"
-        stroke="#4F7449"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        fill="none"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: progress }}
-        transition={{ duration: 0.85, type: 'spring' }}
-      />
-      <motion.g
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: progress, scale: progress }}
-        transition={{ duration: 0.75, delay: 0.2, type: 'spring' }}
-        style={{ transformOrigin: '21px 20px' }}
-      >
-        <ellipse cx="21" cy="12" rx="5.5" ry="9" fill={color} opacity="0.94" />
-        <ellipse cx="12.5" cy="20" rx="5.8" ry="9.5" fill={color} opacity="0.86" transform="rotate(-48 12.5 20)" />
-        <ellipse cx="29.5" cy="20" rx="5.8" ry="9.5" fill={color} opacity="0.86" transform="rotate(48 29.5 20)" />
-        <ellipse cx="17" cy="28" rx="5" ry="7.5" fill={color} opacity="0.76" transform="rotate(25 17 28)" />
-        <ellipse cx="25" cy="28" rx="5" ry="7.5" fill={color} opacity="0.76" transform="rotate(-25 25 28)" />
-        <path d="M16 21 C19 17 24 17 27 21 C25 28 18 28 16 21" fill="#F1D9A3" opacity="0.88" />
-        <circle cx="21" cy="22" r="2.1" fill="#9C6A5F" opacity="0.45" />
-      </motion.g>
-      <motion.path
-        d="M21 43 C12 40 9 34 8 29 C15 32 19 37 21 43"
-        fill="#6F8B5B"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: progress, opacity: progress * 0.75 }}
-        transition={{ duration: 0.55, delay: 0.28 }}
-        style={{ transformOrigin: '21px 43px' }}
-      />
-    </svg>
-  );
-};
-
-const TreeSVG: React.FC<{ color: string; size: number; progress: number }> = ({ color, size, progress }) => {
-  const scale = size * (0.4 + progress * 0.6);
-  return (
-    <svg width={40 * scale} height={60 * scale} viewBox="0 0 40 60" style={{ overflow: 'visible' }}>
-      {/* Trunk */}
-      <motion.path
-        d="M20 60 L20 30"
-        stroke="#795548"
-        strokeWidth={4}
-        strokeLinecap="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: progress }}
-        transition={{ duration: 0.8 }}
-      />
-      {/* Branches */}
-      <motion.path
-        d="M20 45 L10 35 M20 40 L30 32"
-        stroke="#795548"
-        strokeWidth={2}
-        strokeLinecap="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: progress, opacity: progress }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-      />
-      {/* Foliage */}
-      <motion.g
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: progress, opacity: progress }}
-        transition={{ duration: 1, delay: 0.5, type: 'spring', stiffness: 100 }}
-        style={{ transformOrigin: '20px 25px' }}
-      >
-        <circle cx="20" cy="20" r={12} fill={color} />
-        <circle cx="12" cy="28" r={8} fill={color} opacity={0.9} />
-        <circle cx="28" cy="26" r={9} fill={color} opacity={0.9} />
-        <circle cx="15" cy="15" r={7} fill={color} opacity={0.8} />
-        <circle cx="25" cy="18" r={6} fill={color} opacity={0.8} />
-        <circle cx="20" cy="10" r={5} fill="#81C784" opacity={0.7} />
-      </motion.g>
-    </svg>
-  );
-};
-
-const BushSVG: React.FC<{ color: string; size: number; progress: number }> = ({ color, size, progress }) => {
-  const scale = size * (0.5 + progress * 0.5);
-  return (
-    <svg width={50 * scale} height={30 * scale} viewBox="0 0 50 30">
-      <motion.g
-        initial={{ scaleY: 0, opacity: 0 }}
-        animate={{ scaleY: progress, opacity: progress }}
-        transition={{ duration: 0.8, type: 'spring' }}
-        style={{ transformOrigin: '25px 30px' }}
-      >
-        <ellipse cx="15" cy="25" rx="12" ry="10" fill={color} />
-        <ellipse cx="35" cy="23" rx="14" ry="11" fill={color} opacity={0.9} />
-        <ellipse cx="25" cy="18" rx="10" ry="8" fill={color} opacity={0.85} />
-        <circle cx="20" cy="20" r="3" fill="#FFD600" opacity={0.6} />
-        <circle cx="30" cy="18" r="2.5" fill="#FF5252" opacity={0.5} />
-        <circle cx="15" cy="22" r="2" fill="#FFFFFF" opacity={0.4} />
-      </motion.g>
-    </svg>
-  );
-};
-
-const GrassSVG: React.FC<{ color: string; size: number; progress: number }> = ({ color, size, progress }) => {
-  const scale = size * (0.5 + progress * 0.5);
-  return (
-    <svg width={30 * scale} height={20 * scale} viewBox="0 0 30 20" style={{ overflow: 'visible' }}>
-      <motion.g
-        initial={{ scaleY: 0 }}
-        animate={{ scaleY: progress }}
-        transition={{ duration: 0.5, type: 'spring' }}
-        style={{ transformOrigin: '15px 20px' }}
-      >
-        <path d="M5 20 Q5 10 3 5 Q7 12 8 20" fill={color} />
-        <path d="M12 20 Q12 8 10 3 Q14 10 15 20" fill={color} opacity={0.9} />
-        <path d="M20 20 Q20 12 18 7 Q22 13 23 20" fill={color} opacity={0.85} />
-        <path d="M26 20 Q26 10 24 6 Q28 11 28 20" fill={color} opacity={0.8} />
-      </motion.g>
-    </svg>
-  );
-};
-
-const BritishGardenDetails: React.FC<{ progress: number }> = ({ progress }) => (
-  <>
-    {/* Stone edging and low box hedge, deliberately plain to avoid stripe/bar artifacts. */}
-    {Array.from({ length: 18 }, (_, index) => (
-      <div
-        key={`stone-${index}`}
-        style={{
-          position: 'absolute',
-          left: `${4 + index * 5.4}%`,
-          bottom: `${30 + Math.sin(index * 0.7) * 1.2}%`,
-          width: 10,
-          height: 5,
-          borderRadius: 8,
-          background: '#D8D0BD',
-          opacity: 0.55,
-          boxShadow: '0 1px 2px rgba(84, 72, 56, 0.08)',
-        }}
-      />
-    ))}
-    {Array.from({ length: 22 }, (_, index) => (
-      <motion.div
-        key={`box-${index}`}
-        style={{
-          position: 'absolute',
-          left: `${2 + index * 4.7}%`,
-          bottom: `${25.5 + Math.sin(index * 0.55) * 1.4}%`,
-          width: 18,
-          height: 12,
-          borderRadius: '50%',
-          background: '#456F42',
-          boxShadow: '0 3px 6px rgba(27, 94, 32, 0.13)',
-          transform: 'translate(-50%, -50%)',
-        }}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: Math.min(1, progress * 5), opacity: Math.min(0.95, progress * 5) }}
-        transition={{ delay: index * 0.025, type: 'spring', stiffness: 180, damping: 18 }}
-      />
-    ))}
-  </>
+const WildflowerSVG: React.FC<{ color: string; size: number }> = ({ color, size }) => (
+  <svg width={28 * size} height={38 * size} viewBox="0 0 28 38" style={{ overflow: 'visible' }}>
+    <path d="M14 38 C13.5 29 14 22 14 14" stroke="#496F45" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+    <path d="M14 29 C8 27 6 22 5 18 C10 20 13 24 14 29" fill="#6F8A59" opacity="0.82" />
+    <path d="M14 25 C21 22 23 17 23 13 C18 16 15 20 14 25" fill="#789563" opacity="0.74" />
+    <g opacity="0.92">
+      <ellipse cx="14" cy="9" rx="2.7" ry="5" fill={color} />
+      <ellipse cx="9.5" cy="13" rx="2.6" ry="4.6" fill={color} opacity="0.86" transform="rotate(-45 9.5 13)" />
+      <ellipse cx="18.5" cy="13" rx="2.6" ry="4.6" fill={color} opacity="0.86" transform="rotate(45 18.5 13)" />
+      <ellipse cx="11.5" cy="18" rx="2.3" ry="4" fill={color} opacity="0.74" transform="rotate(30 11.5 18)" />
+      <ellipse cx="16.5" cy="18" rx="2.3" ry="4" fill={color} opacity="0.74" transform="rotate(-30 16.5 18)" />
+      <circle cx="14" cy="14.3" r="2.1" fill="#D9C583" opacity="0.9" />
+    </g>
+  </svg>
 );
 
-const BorderMassSVG: React.FC<{ progress: number; bloom: string; width?: number; height?: number }> = ({
+const GrassClumpSVG: React.FC<{ progress: number; tint?: string; size?: number }> = ({
   progress,
-  bloom,
-  width = 86,
-  height = 74,
+  tint = '#59794B',
+  size = 1,
 }) => (
-  <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+  <svg width={70 * size} height={46 * size} viewBox="0 0 70 46" style={{ overflow: 'visible' }}>
     <motion.g
       initial={{ opacity: 0, scaleY: 0 }}
       animate={{ opacity: progress, scaleY: progress }}
-      transition={{ duration: 0.85, type: 'spring', stiffness: 130, damping: 18 }}
-      style={{ transformOrigin: `${width / 2}px ${height}px` }}
+      transition={{ duration: 0.55, type: 'spring', stiffness: 150, damping: 18 }}
+      style={{ transformOrigin: '35px 46px' }}
     >
-      {Array.from({ length: 18 }, (_, index) => {
-        const x = 8 + (index * 17) % (width - 14);
-        const h = 18 + (index % 5) * 8;
-        const sway = index % 2 === 0 ? -7 : 7;
+      {Array.from({ length: 16 }, (_, index) => {
+        const x = 5 + index * 4;
+        const height = 18 + (index % 5) * 5;
+        const bend = index % 2 === 0 ? -8 : 7;
         return (
           <path
-            key={`stem-${index}`}
-            d={`M${x} ${height} C${x + sway} ${height - h * 0.45} ${x - sway * 0.3} ${height - h * 0.75} ${x + sway * 0.2} ${height - h}`}
-            stroke={index % 3 === 0 ? '#486B45' : '#5E7B50'}
-            strokeWidth="1.6"
+            key={index}
+            d={`M${x} 46 C${x + bend * 0.25} ${46 - height * 0.35} ${x + bend} ${46 - height * 0.72} ${x + bend * 0.45} ${46 - height}`}
+            stroke={index % 3 === 0 ? '#6F8E59' : tint}
+            strokeWidth="2"
             strokeLinecap="round"
             fill="none"
-            opacity="0.78"
-          />
-        );
-      })}
-      {Array.from({ length: 14 }, (_, index) => {
-        const x = 7 + (index * 19) % (width - 13);
-        const y = height - 10 - (index % 6) * 8;
-        return (
-          <ellipse
-            key={`leaf-${index}`}
-            cx={x}
-            cy={y}
-            rx={5 + (index % 3)}
-            ry={3.5 + (index % 2)}
-            fill={index % 2 === 0 ? '#607D52' : '#789164'}
-            opacity="0.72"
-            transform={`rotate(${index % 2 === 0 ? -24 : 24} ${x} ${y})`}
-          />
-        );
-      })}
-      {Array.from({ length: 16 }, (_, index) => {
-        const x = 9 + (index * 23) % (width - 14);
-        const y = height - 20 - (index % 7) * 7;
-        return (
-          <circle
-            key={`bloom-${index}`}
-            cx={x}
-            cy={y}
-            r={index % 4 === 0 ? 3 : 2.2}
-            fill={bloom}
-            opacity={0.72}
+            opacity={0.62 + (index % 4) * 0.07}
           />
         );
       })}
@@ -409,165 +98,320 @@ const BorderMassSVG: React.FC<{ progress: number; bloom: string; width?: number;
   </svg>
 );
 
-const MATURE_BORDER_MASSES = [
-  { id: 1, x: 12, y: 84, delay: 0.18, bloom: '#C58A98', width: 78, height: 58 },
-  { id: 2, x: 31, y: 82, delay: 0.28, bloom: '#DCC7AA', width: 92, height: 66 },
-  { id: 3, x: 51, y: 81, delay: 0.38, bloom: '#AD91C4', width: 98, height: 72 },
-  { id: 4, x: 72, y: 83, delay: 0.48, bloom: '#C9768A', width: 90, height: 66 },
-  { id: 5, x: 89, y: 85, delay: 0.58, bloom: '#E6D7BE', width: 72, height: 58 },
-  { id: 6, x: 21, y: 72, delay: 0.68, bloom: '#A98BC0', width: 92, height: 84 },
-  { id: 7, x: 50, y: 69, delay: 0.78, bloom: '#D19AA7', width: 112, height: 92 },
-  { id: 8, x: 79, y: 72, delay: 0.88, bloom: '#E8D7BA', width: 92, height: 84 },
-];
-
-const POINT_BLOOMS = Array.from({ length: 96 }, (_, index) => ({
-  id: index,
-  x: 5 + ((index * 17) % 90),
-  y: 94 - ((index * 11) % 38),
-  color: ['#F6F0E2', '#E7D8BE', '#FFF9EC', '#D2A0AD', '#F2E7D0', '#E1C5B1'][index % 6],
-  size: 0.55 + (index % 4) * 0.08,
-}));
-
-const PointBloomSVG: React.FC<{ color: string; size: number }> = ({ color, size }) => (
-  <svg width={26 * size} height={32 * size} viewBox="0 0 26 32" style={{ overflow: 'visible' }}>
-    <path d="M13 32 C13 24 13 18 13 11" stroke="#4F7449" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-    <ellipse cx="9" cy="22" rx="4" ry="2.5" fill="#6F8B5B" opacity="0.78" transform="rotate(-28 9 22)" />
-    <ellipse cx="17" cy="18" rx="4" ry="2.5" fill="#7F9968" opacity="0.72" transform="rotate(28 17 18)" />
-    <ellipse cx="13" cy="8" rx="2.4" ry="4" fill={color} opacity="0.82" />
-    <ellipse cx="9.5" cy="11.5" rx="2.2" ry="3.6" fill={color} opacity="0.7" transform="rotate(-45 9.5 11.5)" />
-    <ellipse cx="16.5" cy="11.5" rx="2.2" ry="3.6" fill={color} opacity="0.7" transform="rotate(45 16.5 11.5)" />
-    <circle cx="13" cy="11.5" r="1.8" fill="#E9D9A8" />
-  </svg>
-);
-
-const BeeSVG: React.FC<{ size?: number }> = ({ size = 1 }) => (
-  <svg width={28 * size} height={22 * size} viewBox="0 0 28 22" style={{ overflow: 'visible' }}>
-    <ellipse cx="10" cy="8" rx="5" ry="3.5" fill="#D8E4F2" opacity="0.62" transform="rotate(-25 10 8)" />
-    <ellipse cx="16" cy="8" rx="5" ry="3.5" fill="#D8E4F2" opacity="0.62" transform="rotate(25 16 8)" />
-    <ellipse cx="14" cy="13" rx="8" ry="5.2" fill="#D9A833" />
-    <path d="M9 9 C10 12 10 15 9 18 M14 8 C15 11 15 15 14 18 M19 9 C20 12 20 15 19 17" stroke="#4A3A24" strokeWidth="1.5" opacity="0.9" />
-    <circle cx="6" cy="12" r="2.4" fill="#3C3124" />
-    <path d="M4 10 C2 8 1 8 0 7 M5 9 C4 7 4 6 3 5" stroke="#3C3124" strokeWidth="1" strokeLinecap="round" />
-  </svg>
-);
-
-const CenterpieceFlowerSVG: React.FC<{ progress: number }> = ({ progress }) => {
-  const stemProgress = Math.min(1, progress / 0.28);
-  const budProgress = Math.max(0, Math.min(1, (progress - 0.18) / 0.25));
-  const bloomProgress = Math.max(0, Math.min(1, (progress - 0.42) / 0.3));
-  const detailProgress = Math.max(0, Math.min(1, (progress - 0.72) / 0.2));
+const FlowerBedSVG: React.FC<{ progress: number; bloom: string; width: number; height: number }> = ({
+  progress,
+  bloom,
+  width,
+  height,
+}) => {
+  const flowerCount = Math.max(5, Math.floor(width / 14));
+  const flowers = Array.from({ length: flowerCount }, (_, i) => {
+    const x = 12 + (i * 19) % (width - 24);
+    const yBase = height - 4;
+    const stemHeight = 18 + (i % 4) * 10;
+    const type = i % 3; // 0 = tulip, 1 = daisy, 2 = lavender
+    return { id: i, x, yBase, stemHeight, type };
+  });
 
   return (
-    <svg width={112} height={152} viewBox="0 0 112 152" style={{ overflow: 'visible' }}>
-      <motion.path
-        d="M56 152 C55 122 55 92 56 58"
-        stroke="#3F6742"
-        strokeWidth="4"
-        strokeLinecap="round"
-        fill="none"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: stemProgress }}
-        transition={{ duration: 0.8, type: 'spring' }}
-      />
-      <motion.path
-        d="M56 120 C35 112 26 95 25 82 C43 90 52 104 56 120"
-        fill="#6F8B5B"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: stemProgress, opacity: stemProgress * 0.78 }}
-        transition={{ duration: 0.7, delay: 0.2 }}
-        style={{ transformOrigin: '56px 120px' }}
-      />
-      <motion.path
-        d="M56 103 C78 94 86 77 86 64 C68 73 59 88 56 103"
-        fill="#7F9968"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: stemProgress, opacity: stemProgress * 0.72 }}
-        transition={{ duration: 0.7, delay: 0.28 }}
-        style={{ transformOrigin: '56px 103px' }}
-      />
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
       <motion.g
-        initial={{ opacity: 0, scale: 0.4 }}
-        animate={{ opacity: budProgress * (1 - bloomProgress * 0.45), scale: 0.4 + budProgress * 0.55 }}
-        transition={{ duration: 0.6, type: 'spring' }}
-        style={{ transformOrigin: '56px 52px' }}
+        initial={{ opacity: 0, scaleY: 0.25 }}
+        animate={{ opacity: progress, scaleY: 0.35 + progress * 0.65 }}
+        transition={{ duration: 0.7, type: "spring", stiffness: 120, damping: 18 }}
+        style={{ transformOrigin: `${width / 2}px ${height}px` }}
       >
-        <path d="M56 64 C39 49 43 30 56 18 C69 30 73 49 56 64" fill="#EFE5D0" />
-        <path d="M56 64 C49 48 50 34 56 18 C62 34 63 48 56 64" fill="#D7B5A8" opacity="0.55" />
-      </motion.g>
-      <motion.g
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: bloomProgress, scale: bloomProgress }}
-        transition={{ duration: 0.9, type: 'spring', stiffness: 120, damping: 16 }}
-        style={{ transformOrigin: '56px 52px' }}
-      >
-        <ellipse cx="56" cy="23" rx="10" ry="23" fill="#FBF6EA" />
-        <ellipse cx="34" cy="40" rx="11" ry="25" fill="#F4E7D7" transform="rotate(-48 34 40)" />
-        <ellipse cx="78" cy="40" rx="11" ry="25" fill="#F4E7D7" transform="rotate(48 78 40)" />
-        <ellipse cx="42" cy="67" rx="11" ry="24" fill="#E9C7BE" transform="rotate(30 42 67)" opacity="0.92" />
-        <ellipse cx="70" cy="67" rx="11" ry="24" fill="#E9C7BE" transform="rotate(-30 70 67)" opacity="0.92" />
-        <ellipse cx="56" cy="56" rx="18" ry="22" fill="#F7EEE1" opacity="0.88" />
-        <path d="M42 54 C49 42 63 42 70 54 C67 73 45 73 42 54" fill="#E7C98D" opacity="0.88" />
-        <circle cx="56" cy="58" r="5" fill="#A3745C" opacity="0.42" />
-      </motion.g>
-      <motion.g
-        initial={{ opacity: 0 }}
-        animate={{ opacity: detailProgress }}
-        transition={{ duration: 0.5 }}
-      >
-        <path d="M56 6 C55 21 55 36 56 51" stroke="#D8B8AE" strokeWidth="1" opacity="0.55" />
-        <path d="M23 29 C35 39 44 47 54 56" stroke="#D8B8AE" strokeWidth="1" opacity="0.45" />
-        <path d="M89 29 C77 39 68 47 58 56" stroke="#D8B8AE" strokeWidth="1" opacity="0.45" />
-        <circle cx="48" cy="56" r="1.5" fill="#8E624F" opacity="0.45" />
-        <circle cx="56" cy="53" r="1.5" fill="#8E624F" opacity="0.45" />
-        <circle cx="64" cy="56" r="1.5" fill="#8E624F" opacity="0.45" />
+        {/* Small pebbles along the base */}
+        {Array.from({ length: Math.floor(width / 8) }, (_, i) => (
+          <ellipse
+            key={`pebble-${i}`}
+            cx={6 + (i * 13) % (width - 12)}
+            cy={height - 2 + (i % 3)}
+            rx={2 + (i % 3)}
+            ry={1.2 + (i % 2) * 0.6}
+            fill={i % 2 === 0 ? '#9E8E7E' : '#B5A594'}
+            opacity="0.55"
+          />
+        ))}
+
+        {flowers.map((f) => {
+          const topY = f.yBase - f.stemHeight;
+          const sway = f.id % 2 === 0 ? -4 : 4;
+          if (f.type === 0) {
+            // Tulip
+            return (
+              <g key={`flower-${f.id}`}>
+                <path
+                  d={`M${f.x} ${f.yBase} C${f.x + sway * 0.3} ${f.yBase - f.stemHeight * 0.5} ${f.x} ${topY + 4} ${f.x} ${topY}`}
+                  stroke="#4A7A3A"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity="0.85"
+                />
+                {/* Tulip leaves */}
+                <path
+                  d={`M${f.x} ${f.yBase - 4} C${f.x - 5} ${f.yBase - f.stemHeight * 0.35} ${f.x - 3} ${topY + 6} ${f.x - 1} ${topY + 8}`}
+                  stroke="#5A8A4A"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity="0.7"
+                />
+                {/* Tulip bloom */}
+                <g opacity="0.9">
+                  <path d={`M${f.x} ${topY} C${f.x - 5.5} ${topY - 7} ${f.x - 5} ${topY - 12} ${f.x} ${topY - 14} C${f.x + 5} ${topY - 12} ${f.x + 5.5} ${topY - 7} ${f.x} ${topY}`} fill={bloom} />
+                  <path d={`M${f.x} ${topY} C${f.x - 3.5} ${topY - 5} ${f.x - 3} ${topY - 9} ${f.x} ${topY - 10}`} fill={bloom} opacity="0.8" />
+                  <path d={`M${f.x} ${topY} C${f.x + 3.5} ${topY - 5} ${f.x + 3} ${topY - 9} ${f.x} ${topY - 10}`} fill={bloom} opacity="0.8" />
+                </g>
+              </g>
+            );
+          } else if (f.type === 1) {
+            // Daisy
+            return (
+              <g key={`flower-${f.id}`}>
+                <path
+                  d={`M${f.x} ${f.yBase} C${f.x + sway * 0.3} ${f.yBase - f.stemHeight * 0.5} ${f.x} ${topY + 4} ${f.x} ${topY}`}
+                  stroke="#4A7A3A"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity="0.85"
+                />
+                {/* Daisy leaves */}
+                <ellipse cx={f.x - 3} cy={f.yBase - f.stemHeight * 0.3} rx="3.5" ry="1.8" fill="#5A8A4A" opacity="0.65" transform={`rotate(-35 ${f.x - 3} ${f.yBase - f.stemHeight * 0.3})`} />
+                <ellipse cx={f.x + 2} cy={f.yBase - f.stemHeight * 0.25} rx="3" ry="1.5" fill="#6A9A5A" opacity="0.6" transform={`rotate(25 ${f.x + 2} ${f.yBase - f.stemHeight * 0.25})`} />
+                {/* Daisy petals */}
+                <g opacity="0.92">
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((rot) => (
+                    <ellipse
+                      key={`petal-${rot}`}
+                      cx={f.x}
+                      cy={topY}
+                      rx="2.8"
+                      ry="5"
+                      fill="#F7F0E0"
+                      transform={`rotate(${rot} ${f.x} ${topY})`}
+                    />
+                  ))}
+                  <circle cx={f.x} cy={topY} r="2.2" fill="#E8C860" />
+                </g>
+              </g>
+            );
+          } else {
+            // Lavender
+            return (
+              <g key={`flower-${f.id}`}>
+                <path
+                  d={`M${f.x} ${f.yBase} C${f.x + sway * 0.2} ${f.yBase - f.stemHeight * 0.5} ${f.x} ${topY + 6} ${f.x} ${topY}`}
+                  stroke="#5A6A4A"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity="0.8"
+                />
+                {/* Lavender spike */}
+                {Array.from({ length: 7 }, (_, j) => (
+                  <ellipse
+                    key={`spike-${j}`}
+                    cx={f.x + (j % 2 === 0 ? -0.8 : 0.8)}
+                    cy={topY + j * 2.8}
+                    rx="1.6"
+                    ry="1.4"
+                    fill={bloom}
+                    opacity="0.75"
+                  />
+                ))}
+              </g>
+            );
+          }
+        })}
       </motion.g>
     </svg>
   );
 };
 
-const SproutSVG: React.FC<{ progress: number; size?: number }> = ({ progress, size = 1 }) => {
-  const scale = size * (0.6 + progress * 0.4);
+const SunTokenSVG: React.FC = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+    <defs>
+      <radialGradient id="sunTokenGradient" cx="50%" cy="42%" r="58%">
+        <stop offset="0%" stopColor="#FFF4A8" />
+        <stop offset="62%" stopColor="#E7AE2D" />
+        <stop offset="100%" stopColor="#CB7B16" />
+      </radialGradient>
+    </defs>
+    <circle cx="22" cy="22" r="13" fill="url(#sunTokenGradient)" />
+    {[0, 45, 90, 135, 180, 225, 270, 315].map((rotation) => (
+      <path
+        key={rotation}
+        d="M22 3 L25 11 L19 11 Z"
+        fill="#F4CA54"
+        opacity="0.88"
+        transform={`rotate(${rotation} 22 22)`}
+      />
+    ))}
+  </svg>
+);
+
+const WaterTokenSVG: React.FC = () => (
+  <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+    <defs>
+      <linearGradient id="waterTokenGradient" x1="12" y1="4" x2="32" y2="40">
+        <stop offset="0%" stopColor="#D8EFF4" />
+        <stop offset="58%" stopColor="#7DB4C6" />
+        <stop offset="100%" stopColor="#3E8194" />
+      </linearGradient>
+    </defs>
+    <path
+      d="M22 5 C15 15 10 22 10 29 C10 36 15 41 22 41 C29 41 34 36 34 29 C34 22 29 15 22 5Z"
+      fill="url(#waterTokenGradient)"
+    />
+    <path d="M17 19 C15 23 15 29 18 32" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" opacity="0.56" />
+  </svg>
+);
+
+const GardenSceneSVG: React.FC<{ progress: number }> = ({ progress }) => {
+  const pathProgress = reveal(progress, 0.08);
+  const structureProgress = reveal(progress, 0.54);
+
   return (
-    <svg width={34 * scale} height={34 * scale} viewBox="0 0 34 34" style={{ overflow: 'visible' }}>
-      <motion.path
-        d="M17 34 C17 25 17 19 17 12"
-        stroke="#2E7D32"
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: progress }}
-        transition={{ duration: 0.55, type: 'spring' }}
-      />
-      <motion.path
-        d="M17 22 C9 18 7 12 7 8 C13 8 17 13 17 22"
-        fill="#66BB6A"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: progress, opacity: progress }}
-        transition={{ duration: 0.45, delay: 0.15, type: 'spring' }}
-        style={{ transformOrigin: '17px 22px' }}
-      />
-      <motion.path
-        d="M17 20 C25 16 27 10 27 6 C21 6 17 11 17 20"
-        fill="#81C784"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: progress, opacity: progress }}
-        transition={{ duration: 0.45, delay: 0.22, type: 'spring' }}
-        style={{ transformOrigin: '17px 20px' }}
-      />
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+    >
+      <defs>
+        <linearGradient id="gardenBackground" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F2F8F4" />
+          <stop offset="44%" stopColor="#E9F4EC" />
+          <stop offset="65%" stopColor="#A7CB8F" />
+          <stop offset="100%" stopColor="#6F955E" />
+        </linearGradient>
+        <linearGradient id="gardenGravel" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#E8DEC7" />
+          <stop offset="100%" stopColor="#C8B997" />
+        </linearGradient>
+        <linearGradient id="gardenWater" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#8EC2D2" />
+          <stop offset="54%" stopColor="#5F93AC" />
+          <stop offset="100%" stopColor="#376D82" />
+        </linearGradient>
+        <filter id="gardenSoftShadow" x="-20%" y="-20%" width="140%" height="160%">
+          <feDropShadow dx="0.6" dy="1.4" stdDeviation="1.2" floodColor="#2E4A30" floodOpacity="0.22" />
+        </filter>
+      </defs>
+
+      <rect width="100" height="100" fill="url(#gardenBackground)" />
+      <path d="M0 66.4 C16 68 31 66 45 68 C62 71 78 66 100 68 L100 100 L0 100Z" fill="#7EA769" opacity="0.42" />
+
+      {Array.from({ length: 10 }, (_, index) => {
+        const y = 60 + index * 3.8;
+        return (
+          <path
+            key={`mown-${index}`}
+            d={`M-6 ${y + 7} C18 ${y + 4.5} 34 ${y + 9.2} 55 ${y + 5.8} C75 ${y + 3} 88 ${y + 8.8} 106 ${y + 6}`}
+            stroke="#DCE8C9"
+            strokeWidth="0.6"
+            fill="none"
+            opacity="0.25"
+          />
+        );
+      })}
+
+      {MEADOW_SPECKS.map((speck) => (
+        <circle
+          key={speck.id}
+          cx={speck.x}
+          cy={speck.y}
+          r={speck.id % 3 === 0 ? 0.18 : 0.12}
+          fill="#E8F0D4"
+          opacity={speck.opacity}
+        />
+      ))}
+
+      <motion.g
+        initial={false}
+        animate={{ opacity: pathProgress, y: (1 - pathProgress) * 2 }}
+        transition={{ type: 'spring', stiffness: 90, damping: 18 }}
+        filter="url(#gardenSoftShadow)"
+      >
+        <path
+          d="M-5 80 C13 74 23 73 38 78 C52 83 63 82 78 75 C88 70 94 69 105 70 L105 78 C88 77 79 82 67 87 C53 93 39 89 27 83 C17 78 6 81 -5 87Z"
+          fill="url(#gardenGravel)"
+        />
+        <path
+          d="M-4 78 C13 72 24 72 39 76 C52 80 63 80 77 73 C88 68 96 68 104 69"
+          stroke="#B7A884"
+          strokeWidth="0.65"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.55"
+        />
+        {Array.from({ length: 22 }, (_, index) => (
+          <ellipse
+            key={`path-stone-${index}`}
+            cx={2 + index * 4.7}
+            cy={80 + Math.sin(index * 0.9) * 3}
+            rx="1.25"
+            ry="0.42"
+            fill="#F5ECD8"
+            opacity="0.45"
+          />
+        ))}
+      </motion.g>
+
+      {/* Ground texture dots instead of skewed flowers */}
+      {Array.from({ length: 50 }, (_, i) => {
+        const x = 3 + ((i * 29) % 94);
+        const y = 68 + ((i * 19) % 20);
+        return (
+          <circle
+            key={`ground-dot-${i}`}
+            cx={x}
+            cy={y}
+            r={i % 7 === 0 ? 0.55 : 0.35}
+            fill={i % 5 === 0 ? '#B8D4A0' : '#A5C98E'}
+            opacity="0.45"
+          />
+        );
+      })
+      }
+      <motion.g
+        initial={false}
+        animate={{ opacity: structureProgress, y: (1 - structureProgress) * 3 }}
+        transition={{ type: 'spring', stiffness: 95, damping: 16 }}
+        filter="url(#gardenSoftShadow)"
+      >
+        <rect x="13" y="70" width="2.2" height="14" rx="0.6" fill="#8B5A3C" />
+        <rect x="31" y="69" width="2.2" height="14" rx="0.6" fill="#8B5A3C" />
+        <path d="M12 70 C18 65 26 65 34 69" stroke="#A46A42" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+        <path d="M15 69 C20 67 26 67 31 69" stroke="#D2A66E" strokeWidth="0.75" strokeLinecap="round" fill="none" opacity="0.75" />
+      </motion.g>
+
+      {/* Archway over pathway */}
+      <motion.g
+        initial={false}
+        animate={{ opacity: structureProgress, y: (1 - structureProgress) * 2 }}
+        transition={{ type: 'spring', stiffness: 90, damping: 16 }}
+        filter="url(#gardenSoftShadow)"
+      >
+        <rect x="13" y="78" width="2.2" height="22" rx="0.6" fill="#8B5A3C" />
+        <rect x="31" y="78" width="2.2" height="22" rx="0.6" fill="#8B5A3C" />
+        <path d="M12 78 C18 73 26 73 34 77" stroke="#A46A42" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+        <path d="M15 77 C20 75 26 75 31 77" stroke="#D2A66E" strokeWidth="0.75" strokeLinecap="round" fill="none" opacity="0.75" />
+        <motion.path
+          d="M14 84 C18 79 28 77 32 82"
+          stroke="#557648"
+          strokeWidth="1.1"
+          fill="none"
+          opacity="0.85"
+          animate={{ pathLength: structureProgress }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+        />
+      </motion.g>
     </svg>
   );
 };
-
-const SPROUTS = [
-  { id: 1, x: 10, y: 89, size: 1 },
-  { id: 2, x: 18, y: 91, size: 0.8 },
-  { id: 3, x: 29, y: 88, size: 1.1 },
-  { id: 4, x: 41, y: 90, size: 0.9 },
-  { id: 5, x: 54, y: 88, size: 1 },
-  { id: 6, x: 67, y: 91, size: 0.85 },
-  { id: 7, x: 79, y: 89, size: 1.05 },
-  { id: 8, x: 91, y: 90, size: 0.9 },
-];
 
 export const GardenBackground: React.FC = () => {
   const foundation = useGameStore((s) => s.foundation);
@@ -575,63 +419,65 @@ export const GardenBackground: React.FC = () => {
   const gardenBoosts = useGameStore((s) => s.gardenBoosts);
   const popGardenBoost = useGameStore((s) => s.popGardenBoost);
   const [boostTokens, setBoostTokens] = React.useState<GardenBoostToken[]>([]);
+  const [sproutedIds, setSproutedIds] = React.useState<Set<number>>(new Set());
   const previousActivity = React.useRef(moves);
   const tokenId = React.useRef(0);
   const collectedTokenIds = React.useRef<Set<number>>(new Set());
 
-  // Foundations drive completion, while ordinary play keeps advancing the border.
   const totalFoundationCards = foundation.reduce((sum, pile) => sum + pile.length, 0);
   const foundationProgress = totalFoundationCards / 52;
-  const activityCount = moves;
-  const activityProgress = activityCount === 0 ? 0 : Math.min(0.98, 0.04 + activityCount / 135);
-  const boostProgress = Math.min(0.35, gardenBoosts * 0.025);
+  const activityProgress = moves === 0 ? 0 : Math.min(0.96, 0.05 + moves / 145);
+  const boostProgress = Math.min(0.32, gardenBoosts * 0.025);
   const progress = Math.min(1, Math.max(foundationProgress, activityProgress) + boostProgress);
-  const growthEventCount = Math.min(POINT_BLOOMS.length, activityCount + gardenBoosts);
 
   React.useEffect(() => {
-    if (activityCount < previousActivity.current) {
-      previousActivity.current = activityCount;
+    if (moves < previousActivity.current) {
+      previousActivity.current = moves;
       collectedTokenIds.current.clear();
       setBoostTokens([]);
+      setSproutedIds(new Set());
       return;
     }
 
-    if (activityCount <= previousActivity.current) return;
+    if (moves <= previousActivity.current) return;
+
+    // Pick a bloom point that hasn't sprouted yet, in the bottom garden area
+    const available = BLOOM_POINTS.filter((bp) => !sproutedIds.has(bp.id));
+    if (available.length === 0) return;
+    const targetBloom = available[Math.floor(Math.random() * available.length)];
+
+    // Pick start position near upper middle
+    const startX = 20 + Math.random() * 60;
+    const startY = 18 + Math.random() * 22;
 
     const bubbleType: GardenBoostToken['type'] = Math.random() > 0.5 ? 'sun' : 'water';
     const createdTokens: GardenBoostToken[] = [
       {
         id: tokenId.current++,
         type: bubbleType,
-        x: 14 + Math.random() * 72,
-        y: 10 + Math.random() * 26,
-        midX: 0,
-        endX: 0,
-        duration: 14 + Math.random() * 6,
+        x: startX,
+        y: startY,
+        targetX: targetBloom.x,
+        targetY: targetBloom.y,
+        targetBloomId: targetBloom.id,
+        duration: 7 + Math.random() * 4,
       },
-    ].map((token) => {
-      const drift = Math.random() > 0.5 ? 1 : -1;
-      const midX = Math.max(8, Math.min(92, token.x + drift * (5 + Math.random() * 8)));
-      const endX = Math.max(8, Math.min(92, token.x - drift * (3 + Math.random() * 7)));
-      return { ...token, midX, endX };
-    });
+    ];
 
-    previousActivity.current = activityCount;
+    previousActivity.current = moves;
     setBoostTokens((tokens) => [...tokens.slice(-8), ...createdTokens]);
-  }, [activityCount]);
+  }, [moves, sproutedIds]);
 
   const collectBoostToken = (id: number) => {
     if (collectedTokenIds.current.has(id)) return;
     collectedTokenIds.current.add(id);
     popGardenBoost();
     setBoostTokens((tokens) => tokens.filter((token) => token.id !== id));
-  };
-
-  // Stagger plant visibility based on progress
-  const getPlantProgress = (plantDelay: number) => {
-    const threshold = plantDelay;
-    const plantProgress = Math.max(0, Math.min(1, (progress - threshold) / 0.1));
-    return plantProgress;
+    // Mark the bloom point as sprouted
+    const token = boostTokens.find((t) => t.id === id);
+    if (token) {
+      setSproutedIds((prev) => new Set(prev).add(token.targetBloomId));
+    }
   };
 
   return (
@@ -641,34 +487,46 @@ export const GardenBackground: React.FC = () => {
         inset: 0,
         pointerEvents: 'none',
         overflow: 'hidden',
+        zIndex: 0,
       }}
     >
-      {/* Sky gradient */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(circle at 50% 7%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0) 25%), linear-gradient(180deg, #DDEFF7 0%, #EEF8EE 38%, #C9E7C5 100%)',
-        }}
-      />
+      <GardenSceneSVG progress={progress} />
 
-      {/* Ground */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '35%',
-          background: '#7FA86A',
-        }}
-      />
+      {[
+        { id: 1, x: 7, y: 93, start: 0.02, size: 0.85, tint: '#5E7D4E' },
+        { id: 2, x: 22, y: 91, start: 0.08, size: 0.75, tint: '#698A55' },
+        { id: 3, x: 40, y: 92, start: 0.12, size: 0.8, tint: '#55764B' },
+        { id: 4, x: 55, y: 93, start: 0.14, size: 0.76, tint: '#647F50' },
+        { id: 5, x: 72, y: 91, start: 0.16, size: 0.8, tint: '#5E7D4E' },
+        { id: 6, x: 85, y: 93, start: 0.18, size: 0.74, tint: '#698A55' },
+        { id: 7, x: 93, y: 91, start: 0.1, size: 0.7, tint: '#55764B' },
+      ].map((clump) => {
+        const clumpProgress = reveal(progress, clump.start, 0.12);
+        return (
+          <motion.div
+            key={clump.id}
+            style={{
+              position: 'absolute',
+              left: `${clump.x}%`,
+              top: `${clump.y}%`,
+              transform: 'translate(-50%, -100%)',
+              filter: 'drop-shadow(0 6px 8px rgba(38, 67, 40, 0.14))',
+            }}
+            initial={false}
+            animate={{ opacity: clumpProgress }}
+          >
+            <motion.div
+              animate={clumpProgress > 0.85 ? { y: [0, -1.5, 0], rotate: [0, 0.7, 0] } : undefined}
+              transition={{ duration: 5.5 + clump.id * 0.4, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <GrassClumpSVG progress={clumpProgress} tint={clump.tint} size={clump.size} />
+            </motion.div>
+          </motion.div>
+        );
+      })}
 
-      <BritishGardenDetails progress={progress} />
-
-      {MATURE_BORDER_MASSES.map((mass) => {
-        const massProgress = Math.max(0, Math.min(1, (progress - mass.delay) / 0.12));
+      {BORDER_MASSES.map((mass) => {
+        const massProgress = reveal(progress, mass.start, 0.18);
         if (massProgress <= 0) return null;
         return (
           <motion.div
@@ -678,37 +536,22 @@ export const GardenBackground: React.FC = () => {
               left: `${mass.x}%`,
               top: `${mass.y}%`,
               transform: 'translate(-50%, -100%)',
+              filter: 'drop-shadow(0 8px 10px rgba(37, 62, 38, 0.16))',
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: massProgress }}
           >
-            <BorderMassSVG progress={massProgress} bloom={mass.bloom} width={mass.width} height={mass.height} />
+            <motion.div
+              animate={massProgress > 0.92 ? { y: [0, -2, 0], rotate: [0, 0.45, -0.2, 0] } : undefined}
+              transition={{ duration: 6.5 + mass.id * 0.45, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <FlowerBedSVG progress={massProgress} bloom={mass.bloom} width={mass.width} height={mass.height} />
+            </motion.div>
           </motion.div>
         );
       })}
 
-      {/* First growth stage: clear sprouts immediately after play begins. */}
-      {progress > 0 && SPROUTS.map((sprout) => {
-        const sproutProgress = Math.min(1, progress / 0.12);
-        return (
-          <motion.div
-            key={sprout.id}
-            style={{
-              position: 'absolute',
-              left: `${sprout.x}%`,
-              top: `${sprout.y}%`,
-              transform: 'translate(-50%, -100%)',
-            }}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: sproutProgress, y: 0 }}
-            transition={{ duration: 0.35, delay: sprout.id * 0.025 }}
-          >
-            <SproutSVG progress={sproutProgress} size={sprout.size} />
-          </motion.div>
-        );
-      })}
-
-      {POINT_BLOOMS.slice(0, growthEventCount).map((bloom) => (
+      {BLOOM_POINTS.filter((bloom) => sproutedIds.has(bloom.id)).map((bloom) => (
         <motion.div
           key={bloom.id}
           style={{
@@ -716,61 +559,16 @@ export const GardenBackground: React.FC = () => {
             left: `${bloom.x}%`,
             top: `${bloom.y}%`,
             transform: 'translate(-50%, -100%)',
-            zIndex: 2,
+            filter: 'drop-shadow(0 3px 3px rgba(41, 69, 43, 0.12))',
           }}
-          initial={{ opacity: 0, scale: 0, y: 8 }}
+          initial={{ opacity: 0, scale: 0.45, y: 7 }}
           animate={{ opacity: 0.92, scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+          transition={{ type: 'spring', stiffness: 210, damping: 18 }}
         >
-          <PointBloomSVG color={bloom.color} size={bloom.size} />
+          <WildflowerSVG color={bloom.color} size={bloom.size} />
         </motion.div>
       ))}
 
-      {/* Plants */}
-      {PLANTS.map((plant) => {
-        const plantProgress = getPlantProgress(plant.delay);
-        if (plantProgress <= 0) return null;
-
-        return (
-          <motion.div
-            key={plant.id}
-            style={{
-              position: 'absolute',
-              left: `${plant.x}%`,
-              top: `${plant.y}%`,
-              transform: 'translate(-50%, -100%)',
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: plantProgress }}
-          >
-            {plant.type === 'flower' && <FlowerSVG color={plant.color} size={plant.size} progress={plantProgress} />}
-            {plant.type === 'tree' && <TreeSVG color={plant.color} size={plant.size} progress={plantProgress} />}
-            {plant.type === 'bush' && <BushSVG color={plant.color} size={plant.size} progress={plantProgress} />}
-            {plant.type === 'grass' && <GrassSVG color={plant.color} size={plant.size} progress={plantProgress} />}
-            {plant.type === 'spire' && <SpireSVG color={plant.color} size={plant.size} progress={plantProgress} />}
-            {plant.type === 'orchid' && <OrchidSVG color={plant.color} size={plant.size} progress={plantProgress} />}
-          </motion.div>
-        );
-      })}
-
-      {progress > 0.08 && (
-        <motion.div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '76%',
-            transform: 'translate(-50%, -100%)',
-            zIndex: 3,
-            filter: 'drop-shadow(0 8px 12px rgba(42, 73, 46, 0.16))',
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: Math.min(1, progress * 3) }}
-        >
-          <CenterpieceFlowerSVG progress={progress} />
-        </motion.div>
-      )}
-
-      {/* Pop-up boosts: play grows steadily; tapping these accelerates it. */}
       {boostTokens.map((token) => (
         <motion.button
           key={token.id}
@@ -784,31 +582,29 @@ export const GardenBackground: React.FC = () => {
             event.stopPropagation();
             collectBoostToken(token.id);
           }}
-          onAnimationComplete={() => collectBoostToken(token.id)}
           style={{
             position: 'absolute',
             width: 44,
             height: 44,
             border: 'none',
             borderRadius: '50%',
-            background: token.type === 'sun'
-              ? 'radial-gradient(circle, rgba(255,236,120,0.95) 0%, rgba(255,171,0,0.8) 65%, rgba(255,171,0,0) 72%)'
-              : 'radial-gradient(circle, rgba(179,229,252,0.95) 0%, rgba(41,182,246,0.75) 62%, rgba(41,182,246,0) 72%)',
+            background: 'rgba(255, 255, 255, 0.78)',
             cursor: 'pointer',
             pointerEvents: 'auto',
-            filter: 'drop-shadow(0 4px 8px rgba(27, 94, 32, 0.2))',
+            filter: 'drop-shadow(0 5px 10px rgba(44, 76, 46, 0.22))',
             zIndex: 30,
             transform: 'translate(-50%, -50%)',
+            padding: 0,
           }}
           initial={{ opacity: 0, scale: 0.35, left: `${token.x}%`, top: `${token.y}%` }}
           animate={{
-            opacity: [0, 1, 1, 0.95, 0.85],
-            scale: [0.35, 1.03, 0.98, 1.02, 0.96],
-            left: [`${token.x}%`, `${token.midX}%`, `${token.endX}%`],
-            top: [`${token.y}%`, `${Math.max(token.y + 7, 34)}%`, `${Math.max(token.y + 16, 50)}%`, '65%'],
+            opacity: [0, 1, 1, 0],
+            scale: [0.35, 1.03, 1, 0.2],
+            left: [`${token.x}%`, `${token.targetX}%`],
+            top: [`${token.y}%`, `${token.targetY}%`],
           }}
           exit={{ opacity: 0, scale: 0 }}
-          whileHover={{ scale: 1.15 }}
+          whileHover={{ scale: 1.12 }}
           whileTap={{ scale: 0.82 }}
           transition={{
             duration: token.duration,
@@ -818,30 +614,10 @@ export const GardenBackground: React.FC = () => {
             scale: { duration: token.duration, ease: 'easeInOut' },
             opacity: { duration: token.duration, ease: 'easeInOut' },
           }}
+          onAnimationComplete={() => collectBoostToken(token.id)}
         >
-          <span style={{ fontSize: token.type === 'sun' ? 26 : 24, lineHeight: '44px' }}>
-            {token.type === 'sun' ? '☀️' : '💧'}
-          </span>
+          {token.type === 'sun' ? <SunTokenSVG /> : <WaterTokenSVG />}
         </motion.button>
-      ))}
-
-      {[
-        { x: 20, y: 62, threshold: 0.22, dx: 24, dy: -16, delay: 0 },
-        { x: 72, y: 58, threshold: 0.34, dx: -26, dy: -14, delay: 1.2 },
-        { x: 44, y: 51, threshold: 0.48, dx: 18, dy: -18, delay: 0.6 },
-        { x: 84, y: 70, threshold: 0.58, dx: -22, dy: -12, delay: 1.8 },
-        { x: 13, y: 72, threshold: 0.68, dx: 20, dy: -15, delay: 2.4 },
-        { x: 58, y: 66, threshold: 0.78, dx: -18, dy: -20, delay: 3 },
-        { x: 31, y: 58, threshold: 0.88, dx: 26, dy: -10, delay: 0.9 },
-      ].map((bee, index) => progress > bee.threshold && (
-        <motion.div
-          key={index}
-          style={{ position: 'absolute', top: `${bee.y}%`, left: `${bee.x}%`, zIndex: 3 }}
-          animate={{ x: [0, bee.dx, 0], y: [0, bee.dy, 0], rotate: [0, 6, -4, 0] }}
-          transition={{ duration: 6 + index * 0.6, repeat: Infinity, delay: bee.delay, ease: 'easeInOut' }}
-        >
-          <BeeSVG size={0.75 + (index % 3) * 0.08} />
-        </motion.div>
       ))}
     </div>
   );

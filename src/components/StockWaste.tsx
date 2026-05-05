@@ -13,6 +13,7 @@ export const StockWaste: React.FC<{ compact?: boolean }> = ({ compact }) => {
   const clearSelection = useGameStore((s) => s.clearSelection);
   const autoMoveCard = useGameStore((s) => s.autoMoveCard);
   const { soft } = useHaptics();
+  const [lastWasteTap, setLastWasteTap] = React.useState(0);
 
   const drawMode = useGameStore((s) => s.drawMode);
 
@@ -43,6 +44,17 @@ export const StockWaste: React.FC<{ compact?: boolean }> = ({ compact }) => {
       autoMoveCard({ type: 'waste', index: 0 });
       clearSelection();
     }
+  };
+
+  const handleWasteClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    const now = Date.now();
+    if (now - lastWasteTap < 300) {
+      handleWasteDoubleTap();
+    } else {
+      handleWasteTap();
+    }
+    setLastWasteTap(now);
   };
 
   const isWasteSelected = selectedCard?.pile.type === 'waste';
@@ -113,8 +125,7 @@ export const StockWaste: React.FC<{ compact?: boolean }> = ({ compact }) => {
           cursor: waste.length > 0 ? 'pointer' : 'default',
           transition: 'border 0.2s, background 0.2s',
         }}
-        onClick={handleWasteTap}
-        onDoubleClick={handleWasteDoubleTap}
+        onClick={handleWasteClick}
       >
         {waste.slice(-drawMode).map((card, i, visibleCards) => {
           const realIndex = waste.length - visibleCards.length + i;

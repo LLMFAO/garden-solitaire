@@ -15,14 +15,12 @@ interface SettingsState {
   autoMoveToFoundation: boolean;
   soundEnabled: boolean;
   hapticsEnabled: boolean;
-  theme: 'flower' | 'zen';
   stats: Stats;
 
   setDrawMode: (mode: 1 | 3) => void;
   toggleAutoMove: () => void;
   toggleSound: () => void;
   toggleHaptics: () => void;
-  toggleTheme: () => void;
   recordGameResult: (won: boolean, time: number, score: number) => void;
   resetStats: () => void;
 }
@@ -43,16 +41,12 @@ export const useSettingsStore = create<SettingsState>()(
       autoMoveToFoundation: true,
       soundEnabled: false,
       hapticsEnabled: true,
-      theme: 'flower' as const,
       stats: initialStats,
 
       setDrawMode: (mode) => set({ drawMode: mode }),
       toggleAutoMove: () => set((s) => ({ autoMoveToFoundation: !s.autoMoveToFoundation })),
       toggleSound: () => set((s) => ({ soundEnabled: !s.soundEnabled })),
       toggleHaptics: () => set((s) => ({ hapticsEnabled: !s.hapticsEnabled })),
-      toggleTheme: () => set((s) => ({
-        theme: s.theme === 'flower' ? 'zen' : 'flower'
-      })),
 
       recordGameResult: (won, time, score) => {
         const stats = get().stats;
@@ -76,7 +70,6 @@ export const useSettingsStore = create<SettingsState>()(
         autoMoveToFoundation: state.autoMoveToFoundation,
         soundEnabled: state.soundEnabled,
         hapticsEnabled: state.hapticsEnabled,
-        theme: state.theme,
         stats: state.stats,
       }),
     }
