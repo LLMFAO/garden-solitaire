@@ -1,7 +1,17 @@
 node_modules/
 dist/
-ios/
 .tmp-tests/
 *.local
 .env
 .DS_Store
+
+# Capacitor iOS generated files
+ios/App/Pods/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+
+# Xcode user-local state
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/Pods/Pods.xcodeproj/xcuserdata/
+*.xcuserstate

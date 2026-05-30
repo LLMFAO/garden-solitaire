@@ -15,6 +15,7 @@ export const GameBoard: React.FC<{ compact?: boolean }> = ({ compact }) => {
   const gameStatus = useGameStore((s) => s.gameStatus);
   const newGame = useGameStore((s) => s.newGame);
   const checkAutoWin = useGameStore((s) => s.checkAutoWin);
+  const undo = useGameStore((s) => s.undo);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [lastActivity, setLastActivity] = React.useState(Date.now());
 
@@ -59,7 +60,11 @@ export const GameBoard: React.FC<{ compact?: boolean }> = ({ compact }) => {
       onTouchStart={updateActivity}
     >
       <GardenBackground />
-      <TopBar onMenuOpen={() => { updateActivity(); setMenuOpen(true); }} onAutoSolve={checkAutoWin} />
+      <TopBar
+        onMenuOpen={() => { updateActivity(); setMenuOpen(true); }}
+        onAutoSolve={checkAutoWin}
+        onUndo={() => { updateActivity(); undo(); }}
+      />
 
       <motion.div
         style={{

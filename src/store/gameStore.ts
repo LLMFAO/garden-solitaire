@@ -6,18 +6,44 @@ import { dealGame } from '../engine/deck';
 import { calculateMoveScore } from '../engine/scoring';
 import { autoPlayToFoundation } from '../engine/autoPlay';
 
+const MAX_HISTORY = 80;
+const testStorage = new Map<string, string>();
+const canUseCapacitorPreferences = () => typeof window !== 'undefined';
+
 const capacitorStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
+    if (!canUseCapacitorPreferences()) return testStorage.get(name) ?? null;
     const { value } = await Preferences.get({ key: name });
     return value ?? null;
   },
   setItem: async (name: string, value: string): Promise<void> => {
+    if (!canUseCapacitorPreferences()) {
+      testStorage.set(name, value);
+      return;
+    }
     await Preferences.set({ key: name, value });
   },
   removeItem: async (name: string): Promise<void> => {
+    if (!canUseCapacitorPreferences()) {
+      testStorage.delete(name);
+      return;
+    }
     await Preferences.remove({ key: name });
   },
 };
+
+type GameStatus = 'idle' | 'playing' | 'won';
+
+interface GameSnapshot {
+  stock: Card[];
+  waste: Card[];
+  tableau: Card[][];
+  foundation: Card[][];
+  score: number;
+  moves: number;
+  gameStatus: GameStatus;
+  lastMove: Move | null;
+}
 
 interface GameState {
   stock: Card[];
@@ -28,10 +54,10 @@ interface GameState {
   moves: number;
   gardenBoosts: number;
   timeElapsed: number;
-  gameStatus: 'idle' | 'playing' | 'won';
+  gameStatus: GameStatus;
   drawMode: 1 | 3;
   lastMove: Move | null;
-  history: Move[];
+  history: GameSnapshot[];
   selectedCard: { pile: PileRef; cardIndex: number; cards: Card[] } | null;
 
   // Actions
@@ -79,6 +105,62 @@ function idsMatch(cards: Card[], cardIds?: string[]): boolean {
   return cards.length === cardIds.length && cards.every((card, index) => card.id === cardIds[index]);
 }
 
+function cloneCards(cards: Card[]): Card[] {
+  return cards.map(card => ({ ...card }));
+}
+
+function clonePiles(piles: Card[][]): Card[][] {
+  return piles.map(cloneCards);
+}
+
+function clonePileRef(pile: PileRef): PileRef {
+  return { ...pile };
+}
+
+function cloneMove(move: Move | null): Move | null {
+  if (!move) return null;
+  return {
+    cards: cloneCards(move.cards),
+    from: clonePileRef(move.from),
+    to: clonePileRef(move.to),
+    flipCard: move.flipCard
+      ? { pile: clonePileRef(move.flipCard.pile), cardIndex: move.flipCard.cardIndex }
+      : undefined,
+  };
+}
+
+function createUndoSnapshot(state: GameState): GameSnapshot {
+  return {
+    stock: cloneCards(state.stock),
+    waste: cloneCards(state.waste),
+    tableau: clonePiles(state.tableau),
+    foundation: clonePiles(state.foundation),
+    score: state.score,
+    moves: state.moves,
+    gameStatus: state.gameStatus,
+    lastMove: cloneMove(state.lastMove),
+  };
+}
+
+function pushUndoSnapshot(history: GameSnapshot[], snapshot: GameSnapshot): GameSnapshot[] {
+  return [...history, snapshot].slice(-MAX_HISTORY);
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isUndoSnapshot(value: unknown): value is GameSnapshot {
+  if (!isObject(value)) return false;
+  return Array.isArray(value.stock)
+    && Array.isArray(value.waste)
+    && Array.isArray(value.tableau)
+    && Array.isArray(value.foundation)
+    && typeof value.score === 'number'
+    && typeof value.moves === 'number'
+    && (value.gameStatus === 'idle' || value.gameStatus === 'playing' || value.gameStatus === 'won');
+}
+
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
@@ -106,7 +188,13 @@ export const useGameStore = create<GameState>()(
       // Recycle waste back to stock
       if (state.waste.length === 0) return;
       const newStock = [...state.waste].map(c => ({ ...c, faceUp: false }));
-      set({ stock: newStock, waste: [] });
+      set({
+        stock: newStock,
+        waste: [],
+        selectedCard: null,
+        lastMove: null,
+        history: pushUndoSnapshot(state.history, createUndoSnapshot(state)),
+      });
       return;
     }
 
@@ -124,7 +212,8 @@ export const useGameStore = create<GameState>()(
       stock: remaining,
       waste: [...state.waste, ...drawn],
       lastMove: move,
-      history: [...state.history, move],
+      selectedCard: null,
+      history: pushUndoSnapshot(state.history, createUndoSnapshot(state)),
     });
   },
 
@@ -221,7 +310,8 @@ export const useGameStore = create<GameState>()(
       score: newScore,
       moves: newMoves,
       lastMove: move,
-      history: [...state.history, move],
+      history: pushUndoSnapshot(state.history, createUndoSnapshot(state)),
+      selectedCard: null,
       gameStatus: won ? 'won' : 'playing',
     });
 
@@ -250,8 +340,27 @@ export const useGameStore = create<GameState>()(
   },
 
   undo: () => {
-    // Simple undo: not implemented for v1 to keep complexity down
-    // Could be added later by tracking inverse moves
+    const state = get();
+    const snapshot = state.history[state.history.length - 1];
+    if (!snapshot) return;
+
+    if (!isUndoSnapshot(snapshot)) {
+      set({ history: [], selectedCard: null });
+      return;
+    }
+
+    set({
+      stock: cloneCards(snapshot.stock),
+      waste: cloneCards(snapshot.waste),
+      tableau: clonePiles(snapshot.tableau),
+      foundation: clonePiles(snapshot.foundation),
+      score: snapshot.score,
+      moves: snapshot.moves,
+      gameStatus: snapshot.gameStatus,
+      lastMove: cloneMove(snapshot.lastMove),
+      selectedCard: null,
+      history: state.history.slice(0, -1),
+    });
   },
 
   setDrawMode: (mode: 1 | 3) => set({ drawMode: mode }),

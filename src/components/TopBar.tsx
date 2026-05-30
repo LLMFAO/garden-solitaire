@@ -5,6 +5,7 @@ import { useGameStore } from '../store/gameStore';
 interface TopBarProps {
   onMenuOpen: () => void;
   onAutoSolve?: () => void;
+  onUndo?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -13,13 +14,14 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen, onAutoSolve }) => {
+export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen, onAutoSolve, onUndo }) => {
   const score = useGameStore((s) => s.score);
   const timeElapsed = useGameStore((s) => s.timeElapsed);
   const gameStatus = useGameStore((s) => s.gameStatus);
   const foundation = useGameStore((s) => s.foundation);
   const moves = useGameStore((s) => s.moves);
   const gardenBoosts = useGameStore((s) => s.gardenBoosts);
+  const canUndo = useGameStore((s) => s.history.length > 0);
 
   const foundationProgress = foundation.reduce((sum, p) => sum + p.length, 0) / 52;
   const activityCount = moves;
@@ -103,28 +105,58 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuOpen, onAutoSolve }) => {
         </div>
       </div>
 
-      <motion.button
-        onTap={onAutoSolve}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        style={{
-          background: 'linear-gradient(135deg, #FFD600 0%, #FFA000 100%)',
-          color: 'white',
-          border: 'none',
-          borderRadius: 14,
-          padding: '6px 14px',
-          fontSize: 14,
-          fontWeight: 800,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-          boxShadow: '0 2px 8px rgba(255, 214, 0, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-        }}
-      >
-        ✨
-      </motion.button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <motion.button
+          onTap={() => canUndo && onUndo?.()}
+          disabled={!canUndo}
+          aria-label="Undo move"
+          whileHover={canUndo ? { scale: 1.05 } : undefined}
+          whileTap={canUndo ? { scale: 0.95 } : undefined}
+          style={{
+            background: canUndo
+              ? 'linear-gradient(135deg, #FFFFFF 0%, #E8F5E9 100%)'
+              : 'rgba(255,255,255,0.45)',
+            color: canUndo ? 'var(--text-primary)' : 'rgba(27, 94, 32, 0.35)',
+            border: '1px solid rgba(129, 199, 132, 0.45)',
+            borderRadius: 14,
+            padding: '6px 10px',
+            fontSize: 15,
+            fontWeight: 900,
+            cursor: canUndo ? 'pointer' : 'default',
+            fontFamily: 'inherit',
+            boxShadow: canUndo ? '0 2px 8px rgba(27, 94, 32, 0.12)' : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1,
+          }}
+        >
+          ↶
+        </motion.button>
+
+        <motion.button
+          onTap={onAutoSolve}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          style={{
+            background: 'linear-gradient(135deg, #FFD600 0%, #FFA000 100%)',
+            color: 'white',
+            border: 'none',
+            borderRadius: 14,
+            padding: '6px 14px',
+            fontSize: 14,
+            fontWeight: 800,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            boxShadow: '0 2px 8px rgba(255, 214, 0, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          ✨
+        </motion.button>
+      </div>
     </motion.div>
   );
 };

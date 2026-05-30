@@ -119,3 +119,69 @@ test('store moveCard rejects malformed selected card id lists', () => {
   assert.equal(moved, true);
   assert.deepEqual(useGameStore.getState().tableau[1].map(c => c.id), [king.id, queen.id, jack.id]);
 });
+
+test('store moveCard allows foundation cards to move back to the tableau', () => {
+  const heartFour = card('hearts', '4');
+  const heartFive = card('hearts', '5');
+  const clubSix = card('clubs', '6');
+  resetStore({
+    foundation: [[heartFour, heartFive], [], [], []],
+    tableau: [[clubSix], [], [], [], [], [], []],
+  });
+
+  const moved = useGameStore.getState().moveCard(
+    { type: 'foundation', index: getSuitIndex('hearts') },
+    { type: 'tableau', index: 0 },
+    [heartFive.id],
+  );
+
+  const state = useGameStore.getState();
+  assert.equal(moved, true);
+  assert.deepEqual(state.foundation[getSuitIndex('hearts')].map(c => c.id), [heartFour.id]);
+  assert.deepEqual(state.tableau[0].map(c => c.id), [clubSix.id, heartFive.id]);
+  assert.equal(state.score, -15);
+  assert.equal(state.moves, 1);
+});
+
+test('store undo restores a tableau flip and moved card', () => {
+  const hiddenNine = card('clubs', '9', false);
+  const heartAce = card('hearts', 'A');
+  resetStore({
+    tableau: [[hiddenNine, heartAce], [], [], [], [], [], []],
+  });
+
+  const moved = useGameStore.getState().moveCard(
+    { type: 'tableau', index: 0 },
+    { type: 'foundation', index: getSuitIndex('hearts') },
+    [heartAce.id],
+  );
+  assert.equal(moved, true);
+
+  useGameStore.getState().undo();
+
+  const state = useGameStore.getState();
+  assert.deepEqual(state.tableau[0].map(c => c.id), [hiddenNine.id, heartAce.id]);
+  assert.equal(state.tableau[0][0].faceUp, false);
+  assert.equal(state.foundation[getSuitIndex('hearts')].length, 0);
+  assert.equal(state.score, 0);
+  assert.equal(state.moves, 0);
+  assert.equal(state.history.length, 0);
+});
+
+test('store undo restores stock and waste after drawing cards', () => {
+  const cards = [card('clubs', '2', false), card('diamonds', '3', false), card('spades', '4', false)];
+  resetStore({ stock: cards, drawMode: 3 });
+
+  useGameStore.getState().drawFromStock();
+  assert.equal(useGameStore.getState().stock.length, 0);
+  assert.deepEqual(useGameStore.getState().waste.map(c => c.id), cards.map(c => c.id));
+  assert.equal(useGameStore.getState().waste.every(c => c.faceUp), true);
+
+  useGameStore.getState().undo();
+
+  const state = useGameStore.getState();
+  assert.deepEqual(state.stock.map(c => c.id), cards.map(c => c.id));
+  assert.equal(state.stock.every(c => !c.faceUp), true);
+  assert.equal(state.waste.length, 0);
+  assert.equal(state.history.length, 0);
+});
