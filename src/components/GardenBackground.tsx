@@ -21,6 +21,16 @@ interface BloomPoint {
   size: number;
 }
 
+interface BurstFlower {
+  id: number;
+  x: number;
+  y: number;
+  color: string;
+  size: number;
+  delay: number;
+  swayDuration: number;
+}
+
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const reveal = (progress: number, start: number, range = 0.16) => clamp01((progress - start) / range);
 
@@ -418,11 +428,36 @@ export const GardenBackground: React.FC = () => {
   const moves = useGameStore((s) => s.moves);
   const gardenBoosts = useGameStore((s) => s.gardenBoosts);
   const popGardenBoost = useGameStore((s) => s.popGardenBoost);
+  const gameStatus = useGameStore((s) => s.gameStatus);
   const [boostTokens, setBoostTokens] = React.useState<GardenBoostToken[]>([]);
   const [sproutedIds, setSproutedIds] = React.useState<Set<number>>(new Set());
+  const [burstFlowers, setBurstFlowers] = React.useState<BurstFlower[]>([]);
   const previousActivity = React.useRef(moves);
   const tokenId = React.useRef(0);
   const collectedTokenIds = React.useRef<Set<number>>(new Set());
+
+  React.useEffect(() => {
+    if (gameStatus === 'won') {
+      const newBurst = Array.from({ length: 40 }, (_, i) => ({
+        id: i + 1000,
+        x: 5 + Math.random() * 90,
+        y: 15 + Math.random() * 70,
+        color: BLOOM_COLORS[Math.floor(Math.random() * BLOOM_COLORS.length)],
+        size: 0.7 + Math.random() * 0.5,
+        delay: Math.random() * 0.8,
+        swayDuration: 3 + Math.random() * 2,
+      }));
+      setBurstFlowers(newBurst);
+
+      const timer = setTimeout(() => {
+        setBurstFlowers([]);
+      }, 4500);
+      return () => clearTimeout(timer);
+    } else {
+      setBurstFlowers([]);
+    }
+  }, [gameStatus]);
+
 
   const totalFoundationCards = foundation.reduce((sum, pile) => sum + pile.length, 0);
   const foundationProgress = totalFoundationCards / 52;
@@ -618,6 +653,37 @@ export const GardenBackground: React.FC = () => {
         >
           {token.type === 'sun' ? <SunTokenSVG /> : <WaterTokenSVG />}
         </motion.button>
+      ))}
+
+      {burstFlowers.map((bf) => (
+        <motion.div
+          key={bf.id}
+          style={{
+            position: 'absolute',
+            left: `${bf.x}%`,
+            top: `${bf.y}%`,
+            transform: 'translate(-50%, -100%)',
+            filter: 'drop-shadow(0 4px 6px rgba(27, 94, 32, 0.15))',
+            zIndex: 150,
+          }}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 0.95, scale: [0, bf.size * 1.15, bf.size], y: [10, -5, 0] }}
+          exit={{ opacity: 0, scale: 0 }}
+          transition={{
+            type: 'spring',
+            stiffness: 150,
+            damping: 15,
+            delay: bf.delay,
+            default: { ease: 'easeInOut' }
+          }}
+        >
+          <motion.div
+            animate={{ rotate: [0, 5, -5, 0] }}
+            transition={{ duration: bf.swayDuration, repeat: Infinity, ease: 'easeInOut', delay: bf.delay }}
+          >
+            <WildflowerSVG color={bf.color} size={bf.size} />
+          </motion.div>
+        </motion.div>
       ))}
     </div>
   );

@@ -5,6 +5,12 @@ dist/
 .env
 .DS_Store
 
+# Build artifacts (Xcode archive, exported IPA)
+build/
+
+# Scratch screenshot captures
+app-store-assets/fresh/
+
 # Capacitor iOS generated files
 ios/App/Pods/
 ios/App/App/public/
@@ -15,3 +21,10 @@ ios/App/App.xcodeproj/xcuserdata/
 ios/App/App.xcworkspace/xcuserdata/
 ios/App/Pods/Pods.xcodeproj/xcuserdata/
 *.xcuserstate
+
+# fastlane
+fastlane/api_key.json
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/metadata
+fastlane/screenshots/**/.itmsp

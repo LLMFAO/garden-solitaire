@@ -1,0 +1,133 @@
+default_platform(:ios)
+
+API_KEY_PATH = File.expand_path("api_key.json", __dir__)
+
+platform :ios do
+  desc "Inspect app version + locale state"
+  lane :inspect do
+    require 'spaceship'
+    token = Spaceship::ConnectAPI::Token.from_json_file(API_KEY_PATH)
+    Spaceship::ConnectAPI.token = token
+
+    app = Spaceship::ConnectAPI::App.find("com.gardensolitaire.app")
+    UI.message("APP: #{app.name} (#{app.bundle_id}) id=#{app.id} primaryLocale=#{app.primary_locale}")
+
+    UI.header("App Store Versions")
+    app.get_app_store_versions.each do |v|
+      UI.message("v#{v.version_string}  state=#{v.app_store_state}  platform=#{v.platform}  id=#{v.id}")
+      begin
+        locs = v.get_app_store_version_localizations
+        UI.message("    locales: #{locs.map(&:locale).join(', ')}")
+      rescue => e
+        UI.message("    (locales err: #{e.message})")
+      end
+    end
+
+    UI.header("Recent builds")
+    begin
+      app.get_builds(sort: "-uploadedDate", limit: 5).each do |b|
+        UI.message("build #{b.version}  state=#{b.processing_state}  expired=#{b.expired}")
+      end
+    rescue => e
+      UI.message("builds err: #{e.message}")
+    end
+  end
+
+  desc "Upload screenshots only to the editable App Store version"
+  lane :screens do
+    deliver(
+      api_key_path: API_KEY_PATH,
+      app_identifier: "com.gardensolitaire.app",
+      screenshots_path: File.expand_path("screenshots", __dir__),
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_app_version_update: true,
+      overwrite_screenshots: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false,
+      force: true
+    )
+  end
+
+  desc "Verify uploaded screenshot sets"
+  lane :verify_screens do
+    require 'spaceship'
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from_json_file(API_KEY_PATH)
+    app = Spaceship::ConnectAPI::App.find("com.gardensolitaire.app")
+    v = app.get_app_store_versions.find { |x| x.app_store_state == "PREPARE_FOR_SUBMISSION" }
+    UI.message("Editable version: v#{v.version_string} (#{v.app_store_state})")
+    v.get_app_store_version_localizations.each do |loc|
+      sets = loc.get_app_screenshot_sets
+      sets.each do |set|
+        shots = set.app_screenshots
+        UI.message("#{loc.locale}  #{set.screenshot_display_type}  count=#{shots.size}")
+        shots.sort_by { |sh| sh.file_name.to_s }.each do |sh|
+          UI.message("    - #{sh.file_name}  state=#{sh.asset_delivery_state && sh.asset_delivery_state['state']}")
+        end
+      end
+    end
+  end
+
+  desc "List screenshots for every version (live + editable)"
+  lane :all_screens do
+    require 'spaceship'
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from_json_file(API_KEY_PATH)
+    app = Spaceship::ConnectAPI::App.find("com.gardensolitaire.app")
+    app.get_app_store_versions.each do |v|
+      UI.header("v#{v.version_string}  state=#{v.app_store_state}")
+      v.get_app_store_version_localizations.each do |loc|
+        loc.get_app_screenshot_sets.each do |set|
+          UI.message("  #{loc.locale}  #{set.screenshot_display_type}  count=#{set.app_screenshots.size}")
+        end
+      end
+    end
+  end
+
+  desc "Check submission readiness for editable version"
+  lane :readiness do
+    require 'spaceship'
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from_json_file(API_KEY_PATH)
+    app = Spaceship::ConnectAPI::App.find("com.gardensolitaire.app")
+    v = app.get_app_store_versions(includes: "build").find { |x| x.app_store_state == "PREPARE_FOR_SUBMISSION" }
+    UI.header("Editable v#{v.version_string}")
+    UI.message("releaseType=#{v.release_type}  usesIdfa=#{v.uses_idfa rescue 'n/a'}")
+    begin
+      b = v.build
+      UI.message("attached build: #{b ? b.version : 'NONE'}")
+    rescue => e
+      UI.message("attached build: ERR #{e.message}")
+    end
+    v.get_app_store_version_localizations.each do |loc|
+      wn = loc.whats_new.to_s.strip
+      desc = loc.description.to_s.strip
+      UI.message("#{loc.locale}  whatsNew=#{wn.empty? ? 'EMPTY' : wn[0,60].inspect}  descLen=#{desc.length}")
+    end
+    # encryption / compliance hint
+    UI.message("Latest builds:")
+    app.get_builds(sort: "-uploadedDate", limit: 3).each do |bb|
+      UI.message("  build #{bb.version} state=#{bb.processing_state} usesNonExemptEncryption=#{bb.uses_non_exempt_encryption rescue 'n/a'}")
+    end
+  end
+
+  desc "Attach build 2 and submit v1.0.1 for review"
+  lane :submit do
+    deliver(
+      api_key_path: API_KEY_PATH,
+      app_identifier: "com.gardensolitaire.app",
+      build_number: "2",
+      submit_for_review: true,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: true,
+      skip_app_version_update: true,
+      force: true,
+      run_precheck_before_submit: false,
+      automatic_release: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false
+      }
+    )
+  end
+end
