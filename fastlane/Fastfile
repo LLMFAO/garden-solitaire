@@ -130,4 +130,18 @@ platform :ios do
       }
     )
   end
+
+  desc "List all registered bundle identifiers in the account"
+  lane :bundle_ids do
+    require 'spaceship'
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from_json_file(API_KEY_PATH)
+    ids = Spaceship::ConnectAPI::BundleId.all
+    UI.message("Total bundle IDs: #{ids.size}")
+    ids.sort_by { |b| b.identifier.to_s }.each do |b|
+      UI.message("  #{b.identifier}   name=#{b.name.inspect}  platform=#{b.platform}  seedId=#{b.seed_id}")
+    end
+  end
+
+
+
 end

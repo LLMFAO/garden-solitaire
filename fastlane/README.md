@@ -63,6 +63,38 @@ Check submission readiness for editable version
 
 Attach build 2 and submit v1.0.1 for review
 
+### ios bundle_ids
+
+```sh
+[bundle exec] fastlane ios bundle_ids
+```
+
+List all registered bundle identifiers in the account
+
+### ios delete_odyssey
+
+```sh
+[bundle exec] fastlane ios delete_odyssey
+```
+
+Delete the sideloaded Odyssey jailbreak bundle identifier
+
+### ios find_delete
+
+```sh
+[bundle exec] fastlane ios find_delete
+```
+
+Introspect delete methods for bundle ids
+
+### ios probe_client
+
+```sh
+[bundle exec] fastlane ios probe_client
+```
+
+Probe raw HTTP verbs on the ConnectAPI client
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
